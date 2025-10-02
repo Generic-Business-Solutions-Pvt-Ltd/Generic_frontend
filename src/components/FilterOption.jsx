@@ -21,6 +21,7 @@ function FilterOption({
   geofenceTypes = [],
   statuses = [],
   setFile,
+  isDate = true,
 }) {
   const selectAllOpt = { label: 'Select All', value: 'SELECT_ALL' };
   const getOptions = (arr) => [selectAllOpt, ...arr];
@@ -175,7 +176,7 @@ function FilterOption({
                 onChange={(v) => setFilterData({ ...filterData, status: v })}
               />
             )}
-            {typeof handleFormSubmit === 'function' && (
+            {typeof handleFormSubmit === 'function' && isDate && (
               <>
                 <TextField
                   label='From Date'
@@ -215,6 +216,22 @@ function FilterOption({
                 </button>
               </div>
             )}
+            {typeof handleExport === 'function' && typeof handleExportPDF === 'function' && (
+              <div className='flex gap-2.5'>
+                <button
+                  type='button'
+                  className='text-white bg-[#1d31a6] hover:bg-[#1d31a6] font-medium rounded-sm text-sm w-40 px-5 py-2.5 cursor-pointer'
+                  onClick={handleExport}>
+                  Export Excel
+                </button>
+                <button
+                  type='button'
+                  className='text-white bg-red-600 hover:bg-red-700 font-medium rounded-sm text-sm w-40 px-5 py-2.5 cursor-pointer'
+                  onClick={handleExportPDF}>
+                  Export PDF
+                </button>
+              </div>
+            )}
             {typeof handleFileUpload === 'function' && (
               <TextField
                 label='Import File Here'
@@ -241,22 +258,6 @@ function FilterOption({
                   className='w-40 text-white bg-[#07163d] hover:bg-[#07163d] font-medium rounded-sm text-sm px-5 py-1.5 cursor-pointer'
                   onClick={handleSample}>
                   Sample Excel
-                </button>
-              </div>
-            )}
-            {typeof handleExport === 'function' && typeof handleExportPDF === 'function' && (
-              <div className='flex gap-2.5'>
-                <button
-                  type='button'
-                  className='text-white bg-[#1d31a6] hover:bg-[#1d31a6] font-medium rounded-sm text-sm w-40 px-5 py-2.5 cursor-pointer'
-                  onClick={handleExport}>
-                  Export Excel
-                </button>
-                <button
-                  type='button'
-                  className='text-white bg-red-600 hover:bg-red-700 font-medium rounded-sm text-sm w-40 px-5 py-2.5 cursor-pointer'
-                  onClick={handleExportPDF}>
-                  Export PDF
                 </button>
               </div>
             )}

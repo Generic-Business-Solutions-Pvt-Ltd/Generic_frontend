@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { APIURL } from '../../../constants';
 import { ApiService } from '../../../services';
-import { fetchVehicles } from '../../../redux/vehiclesSlice';
-import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { useEffect, useRef, useState } from 'react';
 import IModal from '../../../components/modal/Modal';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import FmdGoodIcon from '@mui/icons-material/FmdGood';
 import FilterOption from '../../../components/FilterOption';
 import CommonSearch from '../../../components/CommonSearch';
+import { fetchVehicles } from '../../../redux/vehiclesSlice';
 import CommonTable from '../../../components/table/CommonTable';
-import FmdGoodIcon from '@mui/icons-material/FmdGood';
+import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
+import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
   { key: 'srNo', header: 'Sr No', render: (_, row) => row.id },
@@ -78,7 +78,7 @@ function Vehicle() {
   const [file, setFile] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [filterData, setFilterData] = useState({ fromDate: '', toDate: '', routes: [], vehicles: [] });
+  const [filterData, setFilterData] = useState({ routes: [], vehicles: [] });
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
@@ -86,8 +86,6 @@ function Vehicle() {
   }, [dispatch]);
 
   const buildApiPayload = (customPage = page + 1, customLimit = limit) => ({
-    ...(filterData.fromDate && { fromDate: filterData.fromDate }),
-    ...(filterData.toDate && { toDate: filterData.toDate }),
     ...(filterData.routes?.length && { routes: JSON.stringify(filterData.routes) }),
     ...(filterData.vehicles?.length && { vehicles: JSON.stringify(filterData.vehicles) }),
     ...(searchQuery?.trim() && { search: searchQuery.trim() }),
@@ -150,7 +148,7 @@ function Vehicle() {
   };
 
   const handleFormReset = () => {
-    setFilterData({ fromDate: '', toDate: '', routes: [], vehicles: [] });
+    setFilterData({ routes: [], vehicles: [] });
     setSearchQuery('');
     setPage(0);
   };
@@ -170,7 +168,6 @@ function Vehicle() {
     }
   };
 
-  // Export only the first 100 vehicles, properly formatted, using fetchVehicles
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -186,7 +183,6 @@ function Vehicle() {
     }
   };
 
-  // Export only the first 100 vehicles to PDF, properly formatted, using fetchVehicles
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -203,7 +199,6 @@ function Vehicle() {
     }
   };
 
-  // Export a sample Excel file for vehicle import template
   const handleSample = () =>
     exportToExcel({
       columns: [
@@ -277,6 +272,7 @@ function Vehicle() {
           setFile={setFile}
           routes={vehicleRoutes?.routes}
           vehicles={vehicleRoutes?.routes}
+          isDate={false}
         />
       </form>
 

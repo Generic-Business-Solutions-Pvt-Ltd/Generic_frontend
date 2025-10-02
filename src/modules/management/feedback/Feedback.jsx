@@ -89,6 +89,9 @@ function Feedback() {
   const handleEdit = (row) => {
     navigate('/management/feedback/edit', { state: row.raw });
   };
+  const handleView = (row) => {
+    navigate('/management/feedback/view', { state: row.raw });
+  };
 
   const handleDelete = async (row) => {
     if (!window.confirm('Are you sure you want to delete this feedback?')) return;
@@ -202,6 +205,7 @@ function Feedback() {
           }}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onView={handleView}
           loading={loading}
         />
       </div>

@@ -52,10 +52,11 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
     ['Driver Number', v?.driver?.phone_number ?? '-'],
   ];
 
+  // 75% of viewport height, responsive, tailwind
   return (
     <>
       {isShowPanel && (
-        <div className='fixed top-1/2 z-[100000] -translate-y-1/2 transition-all duration-300 left-[calc(100vw-385px)]'>
+        <div className='fixed top-2/5 z-[100000] -translate-y-1/2 transition-all duration-300 left-[calc(100vw-360px)]'>
           <button
             className='h-10 w-10 bg-gradient-to-br from-[#1d31a6] to-[#3b5998] cursor-pointer text-white flex items-center justify-center rounded-full shadow-lg border border-white'
             onClick={handleRightPanel}
@@ -67,18 +68,24 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
       )}
 
       <div
-        className={`fixed transition-all top-6 ${isShowPanel ? 'right-0' : 'right-[-340px]'}
-        w-[360px] rounded-xl bg-white z-[99999] shadow-2xl border border-gray-200 overflow-hidden`}
-        style={{ transition: 'right 0.3s' }}>
+        className={`fixed transition-all top-0 
+          ${
+            isShowPanel ? 'right-0' : 'right-[-340px]'
+          } w-[340px] rounded-xl bg-white z-[99999] shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
+        style={{
+          transition: 'right 0.3s',
+          minHeight: 0,
+          maxHeight: 'calc(100vh - 5rem)',
+        }}>
         <div className='flex flex-col items-center bg-gradient-to-r from-[#1d31a6] to-[#3b5998] py-4 px-4 border-b border-gray-200'>
           <p className='font-bold text-lg text-white mb-1 truncate w-full text-center'>{v?.vehicle_name ?? '-'}</p>
-          <div className='flex justify-between items-center w-full gap-2 mt-2'>
+          <div className='flex justify-between items-center w-full gap-2 mt-1'>
             <span
               className='px-3 py-1 rounded-full text-xs font-semibold shadow'
               style={{
                 backgroundColor: statusColorMap[status] || '#000',
                 color: '#fff',
-                minWidth: 80,
+                minWidth: 60,
                 textAlign: 'center',
                 letterSpacing: 1,
               }}>
@@ -90,19 +97,19 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
           </div>
         </div>
 
-        <div className='details-panel py-4 px-4 bg-gray-50 min-h-[340px]'>
+        <div className='details-panel flex-1 py-4 px-4 bg-gray-50 overflow-y-auto'>
           <div className='grid grid-cols-1 gap-3'>
             {details.map(([label, value]) => (
               <div
                 key={label}
                 className='flex justify-between items-center bg-white rounded-md px-3 py-2 shadow-sm border border-gray-100'>
-                <span className='text-gray-500 font-medium text-[12px]'>{label}</span>
-                <span className='text-gray-900 font-semibold text-[12px]'>{value || '-'}</span>
+                <span className='text-gray-500 font-medium text-xs'>{label}</span>
+                <span className='text-gray-900 font-semibold text-xs'>{value || '-'}</span>
               </div>
             ))}
           </div>
 
-          <div className='flex flex-wrap justify-center gap-2 mt-7 w-full'>
+          <div className='flex flex-wrap justify-center gap-3 mt-4 w-full'>
             <Link to='/report/parked'>
               <Btn>Reports</Btn>
             </Link>
@@ -123,7 +130,7 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
 };
 
 const Btn = ({ children }) => (
-  <button className='bg-gradient-to-r from-[#1d31a6] to-[#3b5998] px-3 py-1.5 text-white rounded-lg text-[12px] font-semibold shadow hover:from-[#3b5998] hover:to-[#1d31a6] transition-all duration-150 cursor-pointer'>
+  <button className='bg-gradient-to-r from-[#1d31a6] to-[#3b5998] px-3 py-2 text-white rounded-lg text-xs font-semibold shadow hover:from-[#3b5998] hover:to-[#1d31a6] transition-all duration-150 cursor-pointer'>
     {children}
   </button>
 );

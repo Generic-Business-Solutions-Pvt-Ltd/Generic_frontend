@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { TextField } from '@mui/material';
+import { TextField, Grid, Box, Button, Paper, Divider } from '@mui/material';
 import { APIURL } from '../../../../constants';
 import { ApiService } from '../../../../services';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const FeedbackFrom = () => {
   const navigate = useNavigate();
-  const { state: data } = useLocation();
+  const { state: data, pathname } = useLocation();
+  const isEdit = pathname.includes('/edit');
   const [action, setAction] = useState('');
+
+  const employeeName = `${data?.employee?.first_name || ''} ${data?.employee?.last_name || ''}`.trim();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,67 +22,95 @@ const FeedbackFrom = () => {
   };
 
   return (
-    <div className='bg-white rounded-sm border-t-3 border-b-3 border-[#07163d]'>
-      <h1 className='text-2xl font-bold p-3 text-[#060607]'>Feedback Details</h1>
-      <p className='mx-3 mb-2'>
-        <span className='text-red-500'>*</span> indicates required field
-      </p>
-      <hr className='border border-gray-300' />
-      <div className='p-5'>
-        <form onSubmit={handleSubmit}>
-          <div className='grid lg:grid-cols-2 md:grid-cols-2 sm:grid-cols-1 gap-4'>
-            <div className='space-y-3'>
-              <p>
-                <span className='font-semibold'>Employee Name</span>:{' '}
-                {`${data.employee.first_name || ''} ${data.employee.last_name || ''}`.trim()}
-              </p>
-              <p>
-                <span className='font-semibold'>Rating</span>: {typeof data?.rating !== 'undefined' ? data.rating : '-'}
-              </p>
-              <p>
-                <span className='font-semibold'>Message</span>: {data?.message || '-'}
-              </p>
-              <p>
-                <span className='font-semibold'>Created At</span>:{' '}
-                {data?.created_at ? new Date(data.created_at).toLocaleString() : '-'}
-              </p>
-            </div>
-            <div>
-              <label className='block mb-2 text-sm font-medium text-gray-900'>
-                Note (Action) <span className='text-red-500'>*</span>
-              </label>
-              <TextField
-                type='text'
-                id='action'
-                name='action'
-                fullWidth
-                size='small'
-                multiline
-                minRows={4}
-                placeholder='Enter Action'
-                value={action}
-                onChange={(e) => setAction(e.target.value)}
-                required
-              />
-            </div>
-            <div className='flex justify-end gap-4 mt-4 items-center col-span-full'>
-              <button
-                type='submit'
-                className='text-white bg-[#07163d] hover:bg-[#07163d]/90 focus:ring-4 focus:outline-none focus:ring-[#07163d]/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
-                Save
-              </button>
-              <Link to='/management/feedbacks'>
-                <button
-                  type='button'
-                  className='text-white bg-gray-500 hover:bg-gray-500/90 focus:ring-4 focus:outline-none focus:ring-gray-500/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
+    <Paper sx={{ borderRadius: 2, borderTop: 2, borderBottom: 2, p: 3 }}>
+      <Box mb={2} fontWeight={600} fontSize={20}>
+        Feedback Details
+      </Box>
+      {isEdit && (
+        <Box mb={2} fontSize={14}>
+          * indicates required field
+        </Box>
+      )}
+      <Divider sx={{ mb: 3 }} />
+      <form onSubmit={isEdit ? handleSubmit : (e) => e.preventDefault()}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label='Employee Name'
+              value={employeeName || '-'}
+              fullWidth
+              size='small'
+              InputProps={{ readOnly: true }}
+              margin='dense'
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label='Rating'
+              value={data?.rating ?? '-'}
+              fullWidth
+              size='small'
+              InputProps={{ readOnly: true }}
+              margin='dense'
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label='Created At'
+              value={data?.created_at ? new Date(data.created_at).toLocaleString() : '-'}
+              fullWidth
+              size='small'
+              InputProps={{ readOnly: true }}
+              margin='dense'
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label='Message'
+              value={data?.message || '-'}
+              fullWidth
+              size='small'
+              multiline
+              minRows={4}
+              InputProps={{ readOnly: true }}
+              margin='dense'
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label={`Note (Action)${isEdit ? ' *' : ''}`}
+              type='text'
+              id='action'
+              name='action'
+              fullWidth
+              size='small'
+              multiline
+              minRows={4}
+              placeholder='Enter Action'
+              value={isEdit ? action : data?.action || ''}
+              onChange={isEdit ? (e) => setAction(e.target.value) : undefined}
+              required={isEdit}
+              InputProps={!isEdit ? { readOnly: true } : undefined}
+              margin='dense'
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Box display='flex' justifyContent='flex-end' gap={2} mt={2}>
+              {isEdit && (
+                <Button type='submit' variant='contained'>
+                  Save
+                </Button>
+              )}
+              <Link to='/management/feedbacks' style={{ textDecoration: 'none' }}>
+                <Button type='button' variant='outlined'>
                   Back
-                </button>
+                </Button>
               </Link>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+            </Box>
+          </Grid>
+        </Grid>
+      </form>
+    </Paper>
   );
 };
 

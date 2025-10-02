@@ -70,7 +70,7 @@ function PunchTimelog() {
 
   const { punchLogReportData, loading, error } = useSelector((s) => s.punchInOut);
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
+  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails || []);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
   const { plants } = useSelector((s) => s.plant);
 

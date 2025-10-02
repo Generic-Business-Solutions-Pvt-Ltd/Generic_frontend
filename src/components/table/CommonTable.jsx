@@ -137,7 +137,7 @@ const CommonTable = ({
         component='div'
         count={totalCount}
         rowsPerPage={rowsPerPage}
-        page={page - 1}
+        page={page}
         onPageChange={(event, newPage) => onPageChange(newPage)}
         onRowsPerPageChange={(event) => {
           onRowsPerPageChange(parseInt(event.target.value));

@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
 import { APIURL } from '../../../constants';
 import { ApiService } from '../../../services';
-import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import CommonSearch from '../../../components/CommonSearch';
 import FilterOption from '../../../components/FilterOption';
 import CommonTable from '../../../components/table/CommonTable';
+import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
+import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
   { key: 'id', header: 'Sr No' },
@@ -19,17 +18,6 @@ const columns = [
   { key: 'employeeName', header: 'Employee Name' },
   { key: 'message', header: 'Message' },
   { key: 'createdOn', header: 'Created On' },
-  {
-    key: 'actions',
-    header: 'Actions',
-    render: (_, row, handlers) => (
-      <div className='flex justify-center gap-3 text-white'>
-        <button className='bg-red-400 py-1.5 p-2 rounded-md cursor-pointer' onClick={() => handlers.handleDelete(row)}>
-          <DeleteIcon fontSize='10px' />
-        </button>
-      </div>
-    ),
-  },
 ];
 
 function formatAnnouncement(data, offset = 0) {
@@ -47,6 +35,7 @@ function formatAnnouncement(data, offset = 0) {
 
 function Announcement() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const fileInputRef = useRef();
   const company_id = localStorage.getItem('company_id');
 
@@ -130,57 +119,42 @@ function Announcement() {
       } else {
         toast.error(res.message || 'Upload failed');
       }
-    } catch (error) {
+    } catch {
       toast.error('Upload failed.');
     }
   };
 
-  // Export only the first 100 announcements, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
       const res = await ApiService.get(APIURL.ANNOUNCEMENT, exportPayload);
       const list = Array.isArray(res.data?.announcements) ? res.data.announcements : [];
-
-      if (!list.length) {
-        toast.error('No data available to export.');
-        return;
-      }
-
       exportToExcel({
         columns,
         rows: buildExportRows({ columns, data: formatAnnouncement(list) }),
         fileName: 'announcements.xlsx',
       });
-    } catch (err) {
+    } catch {
       toast.error('Export failed');
     }
   };
 
-  // Export only the first 100 announcements to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
       const res = await ApiService.get(APIURL.ANNOUNCEMENT, exportPayload);
       const list = Array.isArray(res.data?.announcements) ? res.data.announcements : [];
-
-      if (!list.length) {
-        toast.error('No data available to export.');
-        return;
-      }
-
       exportToPDF({
         columns,
         rows: buildExportRows({ columns, data: formatAnnouncement(list) }),
         fileName: 'announcements.pdf',
         orientation: 'landscape',
       });
-    } catch (err) {
+    } catch {
       toast.error('Export PDF failed');
     }
   };
 
-  // Export a sample Excel file for announcement import template
   const handleSample = () =>
     exportToExcel({
       columns: [
@@ -210,8 +184,12 @@ function Announcement() {
     }
   };
 
-  const actionHandlers = {
-    handleDelete,
+  const handleEdit = (row) => {
+    navigate('/management/announcement/edit', { state: row.raw });
+  };
+
+  const handleView = (row) => {
+    navigate('/management/announcement/view', { state: row.raw });
   };
 
   const tableData = formatAnnouncement(filteredData, page * limit);
@@ -249,12 +227,13 @@ function Announcement() {
 
       <div className='bg-white rounded-sm border-t-3 border-[#07163d] mt-4'>
         <CommonTable
-          columns={columns.map((c) =>
-            c.key === 'actions' ? { ...c, render: (_, row) => c.render(_, row, actionHandlers) } : c
-          )}
+          columns={columns}
           data={tableData}
           page={page}
           rowsPerPage={limit}
+          onEdit={handleEdit}
+          onView={handleView}
+          onDelete={handleDelete}
           totalCount={totalCount}
           onPageChange={setPage}
           onRowsPerPageChange={(val) => {

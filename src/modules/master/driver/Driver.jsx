@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { APIURL } from '../../../constants';
 import { ApiService } from '../../../services';
-import { fetchDrivers } from '../../../redux/driverSlice';
-import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { useEffect, useRef, useState } from 'react';
 import IModal from '../../../components/modal/Modal';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchDrivers } from '../../../redux/driverSlice';
 import FilterOption from '../../../components/FilterOption';
 import CommonSearch from '../../../components/CommonSearch';
 import CommonTable from '../../../components/table/CommonTable';
+import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
+import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
   { key: 'srNo', header: 'Sr No', render: (_, row) => row.id },
@@ -76,12 +76,12 @@ function Driver() {
 
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
+  const [file, setFile] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [file, setFile] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [filterData, setFilterData] = useState({ fromDate: '', toDate: '', routes: [], vehicles: [] });
+  const [filterData, setFilterData] = useState({ routes: [], vehicles: [] });
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
@@ -89,8 +89,6 @@ function Driver() {
   }, [dispatch]);
 
   const buildApiPayload = (customPage = page + 1, customLimit = limit) => ({
-    ...(filterData.fromDate && { from_date: filterData.fromDate }),
-    ...(filterData.toDate && { to_date: filterData.toDate }),
     ...(filterData.routes?.length && { routes: JSON.stringify(filterData.routes) }),
     ...(filterData.vehicles?.length && { vehicles: JSON.stringify(filterData.vehicles) }),
     ...(searchQuery?.trim() && { search: searchQuery.trim() }),
@@ -153,7 +151,7 @@ function Driver() {
   };
 
   const handleFormReset = () => {
-    setFilterData({ fromDate: '', toDate: '', routes: [], vehicles: [] });
+    setFilterData({ routes: [], vehicles: [] });
     setSearchQuery('');
     setPage(0);
   };
@@ -173,7 +171,6 @@ function Driver() {
     }
   };
 
-  // Export only the first 100 drivers, properly formatted, using fetchDrivers
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -189,7 +186,6 @@ function Driver() {
     }
   };
 
-  // Export only the first 100 drivers to PDF, properly formatted, using fetchDrivers
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -206,7 +202,6 @@ function Driver() {
     }
   };
 
-  // Export a sample Excel file for driver import template
   const handleSample = () =>
     exportToExcel({
       columns: [
@@ -280,6 +275,7 @@ function Driver() {
           setFile={setFile}
           routes={vehicleRoutes?.routes}
           vehicles={vehicleRoutes?.routes}
+          isDate={false}
         />
       </form>
 

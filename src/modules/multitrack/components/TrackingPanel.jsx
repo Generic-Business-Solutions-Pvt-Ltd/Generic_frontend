@@ -101,9 +101,9 @@ const TrackingPanel = ({ handleRightPanel }) => {
 
   return (
     <div
-      className={`absolute transition-all top-0 rounded-md bg-white h-[calc(100vh-30px)] p-3 z-[99999] ${
-        isTrackShow ? '-left-[452px]' : 'left-0'
-      } w-[452px]`}>
+      className={`absolute transition-all top-0 left-0 rounded-md bg-white h-full p-3 z-[99999] w-[452px] flex flex-col 
+        ${isTrackShow ? '-translate-x-[452px]' : ''}`}
+      style={{ minHeight: 0 }}>
       <div
         className='absolute top-10 -right-5 h-14 bg-[#FFF] cursor-pointer rounded-tr-lg rounded-br-lg text-4xl flex items-center justify-center'
         onClick={() => dispatch(setIsTrackShow(!isTrackShow))}>
@@ -114,7 +114,7 @@ const TrackingPanel = ({ handleRightPanel }) => {
         <StatCard icon={<OnTimeSvg />} label='On time' value='-' bg='#00800026' color='#0e7c13' />
         <StatCard icon={<LateSvg />} label='Late' value='-' bg='#FF000026' color='#d70b0b' />
       </div>
-      <div className='border border-[#1d31a6] rounded-md h-[666px] relative'>
+      <div className='border border-[#1d31a6] rounded-md flex flex-col flex-1 min-h-0 relative'>
         <div className='flex'>
           {statusTabs.map((tab) => (
             <button
@@ -136,7 +136,7 @@ const TrackingPanel = ({ handleRightPanel }) => {
         <div className='p-1 border-b border-gray-300'>
           <ISearch onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className='mhe-list p-2 mt-2 h-[555px] overflow-y-scroll'>
+        <div className='mhe-list p-2 mt-2 flex-1 min-h-0 overflow-y-auto'>
           {shownDevices.map((device) => (
             <div
               key={device.id}

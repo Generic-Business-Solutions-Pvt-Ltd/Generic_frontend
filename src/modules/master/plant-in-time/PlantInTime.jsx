@@ -84,8 +84,12 @@ function PlantInTime() {
     }
   };
 
+  const handleView = (row) => {
+    navigate(`/master/plant-in-time/view`, { state: { ...row, action: 'VIEW' } });
+  };
+
   const handleEdit = (row) => {
-    navigate(`/master/plant-in-time/create`, { state: { ...row, action: 'EDIT' } });
+    navigate(`/master/plant-in-time/edit`, { state: { ...row, action: 'EDIT' } });
   };
 
   const handleDelete = async (row) => {
@@ -230,6 +234,7 @@ function PlantInTime() {
         <CommanTable
           columns={columns}
           data={tableData}
+          onView={handleView}
           onEdit={handleEdit}
           onDelete={handleDelete}
           totalCount={totalCount}

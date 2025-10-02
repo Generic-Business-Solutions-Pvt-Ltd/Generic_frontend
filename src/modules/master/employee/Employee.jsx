@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { APIURL } from '../../../constants';
 import { ApiService } from '../../../services';
-import { fetchDepartments } from '../../../redux/departmentSlice';
-import { fetchEmployees } from '../../../redux/employeeSlice';
-import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { useEffect, useRef, useState } from 'react';
 import IModal from '../../../components/modal/Modal';
-import FilterOption from '../../../components/FilterOption';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import CommonSearch from '../../../components/CommonSearch';
+import FilterOption from '../../../components/FilterOption';
+import { fetchEmployees } from '../../../redux/employeeSlice';
 import CommonTable from '../../../components/table/CommonTable';
+import { fetchDepartments } from '../../../redux/departmentSlice';
+import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
   { key: 'srNo', header: 'Sr No', render: (_, row) => row.id },
@@ -89,7 +89,7 @@ function Employee() {
   const [file, setFile] = useState(null);
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [filterData, setFilterData] = useState({ company_id, fromDate: '', toDate: '', department: '', employee: '' });
+  const [filterData, setFilterData] = useState({ company_id, department: '', employee: '' });
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
@@ -111,8 +111,6 @@ function Employee() {
       company_id,
       department: filterData.department || undefined,
       employee: filterData.employee || undefined,
-      from_date: filterData.fromDate || undefined,
-      to_date: filterData.toDate || undefined,
       search: searchQuery?.trim() || undefined,
       page: 1,
       limit: customLimit !== undefined ? customLimit : limit,
@@ -162,7 +160,7 @@ function Employee() {
   };
 
   const handleFormReset = () => {
-    setFilterData({ company_id, fromDate: '', toDate: '', department: '', employee: '' });
+    setFilterData({ company_id, department: '', employee: '' });
     setSearchQuery('');
     setPage(0);
   };
@@ -180,7 +178,6 @@ function Employee() {
     } else toast.error(res.message || 'Upload failed');
   };
 
-  // Use fetchEmployees for export, with limit 2000, and keep code short
   const handleExport = async () => {
     const res = await dispatch(fetchEmployees(buildApiPayload(2000)));
     const allEmployees = res?.payload?.employes || [];
@@ -202,7 +199,6 @@ function Employee() {
     });
   };
 
-  // handleSample function similar to Vehicle.jsx
   const handleSample = () =>
     exportToExcel({
       columns: [
@@ -279,6 +275,7 @@ function Employee() {
           setFile={setFile}
           departments={departments}
           employees={employees?.employes}
+          isDate={false}
         />
       </form>
 
