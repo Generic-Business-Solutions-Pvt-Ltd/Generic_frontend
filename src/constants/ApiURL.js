@@ -1,6 +1,7 @@
 export const APIURL = {
   LOGIN: 'users/login',
   VERIFY_OTP: 'users/verifyotp',
+
   VEHICLE: 'vehicle',
   LASTVEHICLEDATA: 'lastvehicledata',
   DEPARTMENTS: 'department',
@@ -20,12 +21,14 @@ export const APIURL = {
   PLANTINTIME: 'plantInTime',
   PUNCHLOGREPORT: 'punchlogreportv2',
   UPLOAD: 'upload',
+  EMPONBOARD: 'emponboard',
 
   //DASHBOARD APIS
-  TOTALONBOARDEMP: 'dashboardemp',
+  // TOTALCOUNT: 'dashboard/totalcount',
   DEPARTMENTANALYTICS: 'departmentanalytics',
   LATEARRIVAL: 'dashboardlatearrival',
   OVERSPEEDVIOLATION: 'speedviolation',
   DISTANCECOVER: 'vehicledistance',
+
   PUNCHINMULTITRACK: 'multitrackpunch',
 };

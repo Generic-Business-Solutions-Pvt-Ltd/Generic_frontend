@@ -71,6 +71,7 @@ const VehicleRouteForm = () => {
   const rowData = location.state?.rowData || {};
   const companyID = localStorage.getItem('company_id');
   const isViewMode = location.pathname.includes('/view');
+  console.log(rowData);
 
   const [vehicles, setVehicles] = useState([]);
   const [routeName, setRouteName] = useState('');

@@ -15,19 +15,35 @@ import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
-  { key: 'srNo', header: 'Sr No', render: (_, row) => row.id },
-  { key: 'vehicleName', header: 'Vehicle Name' },
-  { key: 'vehicleNumber', header: 'Vehicle Number' },
-  { key: 'simNumber', header: 'SIM Number' },
-  { key: 'imeiNumber', header: 'IMEI Number' },
-  { key: 'speedLimit', header: 'Speed Limit' },
-  { key: 'seatCount', header: 'Seat Count' },
-  { key: 'createdAt', header: 'Created At' },
-  { key: 'driverName', header: 'Driver Name' },
-  { key: 'driverEmail', header: 'Driver Email' },
-  { key: 'driverPhoneNumber', header: 'Driver Phone' },
-  { key: 'routeNumber', header: 'Route Number' },
-  { key: 'routeName', header: 'Route Name' },
+  { key: 'srNo', header: 'Sr No', render: (_, row) => row.srNo },
+  { key: 'vehicleName', header: 'Vehicle Name', render: (_, row) => row.vehicleName || '-' },
+  { key: 'vehicleNumber', header: 'Vehicle Number', render: (_, row) => row.vehicleNumber || '-' },
+  { key: 'simNumber', header: 'SIM Number', render: (_, row) => row.simNumber || '-' },
+  { key: 'imeiNumber', header: 'IMEI Number', render: (_, row) => row.imeiNumber || '-' },
+  { key: 'speedLimit', header: 'Speed Limit', render: (_, row) => row.speedLimit ?? '-' },
+  { key: 'seatCount', header: 'Seat Count', render: (_, row) => row.seatCount ?? '-' },
+  {
+    key: 'createdAt',
+    header: 'Created At',
+    render: (_, row) => (row.createdAt ? row.createdAt : '-'),
+  },
+  {
+    key: 'driverName',
+    header: 'Driver Name',
+    render: (_, row) => row.driverName || '-',
+  },
+  { key: 'driverEmail', header: 'Driver Email', render: (_, row) => row.driverEmail || '-' },
+  { key: 'driverPhoneNumber', header: 'Driver Phone', render: (_, row) => row.driverPhoneNumber || '-' },
+  {
+    key: 'routeNumber',
+    header: 'Route Number',
+    render: (_, row) => row.routeNumber || '-',
+  },
+  {
+    key: 'routeName',
+    header: 'Route Name',
+    render: (_, row) => row.routeName || '-',
+  },
   {
     key: 'status',
     header: 'Status',
@@ -46,21 +62,27 @@ const columns = [
 
 function formatVehicle(data, offset = 0) {
   return data.map((v, idx) => ({
-    id: offset + idx + 1,
+    srNo: offset + idx + 1,
     actual_id: v.id,
     vehicleName: v.vehicle_name || '',
     vehicleNumber: v.vehicle_number || '',
     simNumber: v.sim_number || '',
     imeiNumber: v.imei_number || '',
-    speedLimit: v.speed_limit || '',
-    seatCount: v.seats || '',
+    speedLimit: v.speed_limit ?? '',
+    seatCount: v.seats ?? '',
     createdAt: v.created_at ? dayjs(v.created_at).format('YYYY-MM-DD') : '',
-    driverName: `${v.driver?.first_name || ''} ${v.driver?.last_name || ''}`.trim() || '-',
+    driverName: v.driver ? [v.driver.first_name, v.driver.last_name].filter(Boolean).join(' ').trim() || '-' : '-',
     driverEmail: v.driver?.email || '-',
     driverPhoneNumber: v.driver?.phone_number || '-',
-    routeNumber: Array.isArray(v.routes) && v.routes[0]?.route_number ? v.routes[0].route_number : '-',
-    routeName: Array.isArray(v.routes) && v.routes[0]?.route_name ? v.routes[0].route_name : '-',
-    status: v.vehicle_status_id === 1 ? 'Active' : 'Inactive',
+    routeNumber:
+      Array.isArray(v.routes) && v.routes.length > 0 && v.routes[0]?.route_number ? v.routes[0].route_number : '-',
+    routeName:
+      Array.isArray(v.routes) && v.routes.length > 0
+        ? v.routes.find((r) => r.name || r.route_name)?.name ||
+          v.routes.find((r) => r.name || r.route_name)?.route_name ||
+          '-'
+        : '-',
+    status: v.vehicle_status_id === 1 || v.active === 1 ? 'Active' : 'Inactive',
   }));
 }
 
@@ -73,13 +95,13 @@ function Vehicle() {
 
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
+  const [file, setFile] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [file, setFile] = useState(null);
+  const [filteredData, setFilteredData] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [filterData, setFilterData] = useState({ routes: [], vehicles: [] });
-  const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
     dispatch(fetchVehicleRoutes({ limit: 100 }));
@@ -178,7 +200,7 @@ function Vehicle() {
         rows: buildExportRows({ columns, data: formatVehicle(vehicles) }),
         fileName: 'vehicle_master.xlsx',
       });
-    } catch (err) {
+    } catch {
       toast.error('Export failed');
     }
   };
@@ -194,7 +216,7 @@ function Vehicle() {
         fileName: 'vehicle_master.pdf',
         orientation: 'landscape',
       });
-    } catch (err) {
+    } catch {
       toast.error('Export PDF failed');
     }
   };
@@ -219,6 +241,7 @@ function Vehicle() {
       fileName: 'vehicle_import_sample.xlsx',
     });
 
+  // Fix: format the filteredData before passing to CommonTable
   const tableData = formatVehicle(filteredData, page * limit);
 
   return (

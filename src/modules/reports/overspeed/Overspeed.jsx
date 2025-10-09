@@ -12,6 +12,7 @@ import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/expo
 const columns = [
   { key: 'vehicle_name', header: 'Vehicle Name', render: (_, r) => r?.vehicle_name || '-' },
   { key: 'vehicle_number', header: 'Vehicle Number', render: (_, r) => r?.vehicle_number || '-' },
+  { key: 'route_number', header: 'Route Number', render: (_, r) => r?.route_number ?? '-' },
   { key: 'entry_speed', header: 'Entry Speed', render: (_, r) => r?.entry_speed ?? '-' },
   {
     key: 'entry_time',

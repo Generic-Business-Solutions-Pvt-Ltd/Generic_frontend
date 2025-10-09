@@ -8,9 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import NotificationPanel from './components/NotificationPanel';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 
 const sidebarLinks = [
   { to: '/dashboard', icon: <DashboardIcon style={{ fontSize: '3rem' }} />, label: 'Dashboard' },
@@ -128,15 +126,6 @@ function Sidebar() {
               </div>
             </div>
             <ProfileSubMenu />
-          </li>
-          <li className='sidebar-item hoverable p-1'>
-            <div className='flex flex-col items-center'>
-              <NotificationsNoneIcon
-                className='cursor-pointer text-black'
-                style={{ fontSize: '2.5rem', color: 'white' }}
-              />
-            </div>
-            <NotificationPanel />
           </li>
         </ul>
       </div>

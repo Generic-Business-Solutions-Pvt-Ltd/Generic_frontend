@@ -67,7 +67,7 @@ const ReportTable = ({
   const safeLimit = validLimits.includes(limit) ? limit : validLimits[0];
 
   return (
-    <div className='bg-white rounded-sm border-t-3 border-[#07163d] mt-4 h-full'>
+    <div className='bg-white rounded-sm border-t-3 border-[#07163d] mt-4 pb-4 max-h-full h-fit'>
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {typeof setSearchQuery === 'function' && (
           <div className='p-3 pb-0'>
@@ -105,6 +105,12 @@ const ReportTable = ({
                 <TableRow sx={{ height: 36 }}>
                   <TableCell colSpan={columns.length} align='center' sx={{ height: 60 }}>
                     No data found
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow sx={{ height: 36 }}>
+                  <TableCell colSpan={columns.length} align='center' sx={{ height: 60, color: 'red' }}>
+                    {typeof error === 'string' ? error : 'An error occurred.'}
                   </TableCell>
                 </TableRow>
               ) : (

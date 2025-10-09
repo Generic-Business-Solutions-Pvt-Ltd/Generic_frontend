@@ -6,15 +6,15 @@ const OverSpeedChart = ({ data }) => {
   const vehicleMap = {};
 
   rawData.forEach((item) => {
-    const vehicleNo = item?.vehicle?.vehicle_number || item?.vehicle_number || 'Unknown Vehicle';
-    if (!vehicleMap[vehicleNo]) vehicleMap[vehicleNo] = [];
-    if (item?.entry_time) vehicleMap[vehicleNo].push({ x: moment(item.entry_time).toDate(), y: item?.max_speed || 0 });
+    const v = item?.vehicle?.vehicle_number || item?.vehicle_number || 'Unknown Vehicle';
+    if (item?.entry_time)
+      (vehicleMap[v] = vehicleMap[v] || []).push({ x: moment(item.entry_time).toDate(), y: item?.max_speed || 0 });
   });
-
-  const series = Object.keys(vehicleMap).map((v) => ({
+  const keys = Object.keys(vehicleMap);
+  const series = keys.map((v, i) => ({
     name: v,
     data: vehicleMap[v].sort((a, b) => a.x - b.x),
-    color: `hsl(210, 70%, ${60 + ((Object.keys(vehicleMap).indexOf(v) * 20) % 30)}%)`,
+    color: `hsl(210,70%,${60 + ((i * 20) % 30)}%)`,
   }));
 
   const allDates = rawData
@@ -23,7 +23,6 @@ const OverSpeedChart = ({ data }) => {
     .map((d) => new Date(d));
   const minDate = allDates.length ? Math.min(...allDates) : undefined;
   const maxDate = allDates.length ? Math.max(...allDates) : undefined;
-
   const options = {
     chart: { type: 'line', zoom: { enabled: true }, toolbar: { show: true } },
     title: { text: 'Overspeed Events by Vehicle', align: 'center', style: { fontSize: 20, fontWeight: 'bold' } },
@@ -39,13 +38,9 @@ const OverSpeedChart = ({ data }) => {
     markers: { size: 6, hover: { size: 8 } },
     stroke: { curve: 'smooth', width: 3 },
     legend: { position: 'bottom', horizontalAlign: 'center', fontSize: 14, markers: { width: 16, height: 16 } },
-    tooltip: {
-      x: { format: 'dd MMM yyyy HH:mm' },
-      y: { formatter: (val) => `${val} km/h` },
-    },
+    tooltip: { x: { format: 'dd MMM yyyy HH:mm' }, y: { formatter: (val) => `${val} km/h` } },
     grid: { borderColor: '#e7e7e7', row: { colors: ['#f3f3f3', 'transparent'], opacity: 0.5 } },
   };
-
   return (
     <div className='p-2'>
       <Chart options={options} series={series} type='line' height={350} />

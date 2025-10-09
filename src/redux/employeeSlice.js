@@ -42,14 +42,12 @@ export const fetchEmployees = createAsyncThunk('employee/fetchEmployees', async 
   }
 });
 
-// Async thunk for fetching the list of employees for the reports
 export const fetchEmployeeOnboard = createAsyncThunk(
   'employee/fetchEmployeeOnboard',
   async (params, { rejectWithValue }) => {
     try {
-      const response = await ApiService.get('emponboard', params);
+      const response = await ApiService.get(APIURL.EMPONBOARD, params);
       if (!response.success) return rejectWithValue(response.message || 'Failed to fetch onboard employees');
-
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message || 'Something went wrong');

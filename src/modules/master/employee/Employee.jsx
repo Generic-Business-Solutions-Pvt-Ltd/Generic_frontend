@@ -14,23 +14,47 @@ import { fetchDepartments } from '../../../redux/departmentSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
-  { key: 'srNo', header: 'Sr No', render: (_, row) => row.id },
-  { key: 'employeeName', header: 'Employee Name' },
-  { key: 'employee_id', header: 'Employee ID' },
-  { key: 'punch_id', header: 'Punch ID' },
-  { key: 'email', header: 'Email' },
-  { key: 'phone_number', header: 'Phone Number' },
-  { key: 'plant', header: 'Plant' },
-  { key: 'department', header: 'Department' },
-  { key: 'doj', header: 'Date of Joining' },
-  { key: 'dob', header: 'Date of Birth' },
-  { key: 'gender', header: 'Gender' },
-  { key: 'vehicle_route_id', header: 'Vehicle Route ID' },
-  { key: 'address', header: 'Address' },
-  { key: 'boarding_latitude', header: 'Boarding Latitude' },
-  { key: 'boarding_longitude', header: 'Boarding Longitude' },
-  { key: 'boarding_address', header: 'Boarding Address' },
-  { key: 'created_at', header: 'Created On' },
+  { key: 'srNo', header: 'Sr No', render: (_, row, idx) => row.id || idx + 1 },
+  {
+    key: 'employeeName',
+    header: 'Employee Name',
+    render: (_, row) => `${row.first_name || ''} ${row.last_name || ''}`.trim() || '-',
+  },
+  { key: 'employee_id', header: 'Employee ID', render: (_, row) => row.employee_id || '-' },
+  { key: 'punch_id', header: 'Punch ID', render: (_, row) => row.punch_id || '-' },
+  { key: 'email', header: 'Email', render: (_, row) => row.email || '-' },
+  { key: 'phone_number', header: 'Phone Number', render: (_, row) => row.phone_number || '-' },
+  { key: 'plant', header: 'Plant', render: (_, row) => row.plant_name || row.plant || '-' },
+  { key: 'department', header: 'Department', render: (_, row) => row.department_name || row.department || '-' },
+  {
+    key: 'doj',
+    header: 'Date of Joining',
+    render: (_, row) => (row.date_of_joining ? dayjs(row.date_of_joining).format('YYYY-MM-DD') : '-'),
+  },
+  {
+    key: 'dob',
+    header: 'Date of Birth',
+    render: (_, row) => (row.date_of_birth ? dayjs(row.date_of_birth).format('YYYY-MM-DD') : '-'),
+  },
+  { key: 'gender', header: 'Gender', render: (_, row) => row.gender || '-' },
+  { key: 'vehicle_route_id', header: 'Vehicle Route ID', render: (_, row) => row.vehicle_route_id || '-' },
+  { key: 'address', header: 'Address', render: (_, row) => row.address || '-' },
+  {
+    key: 'boarding_latitude',
+    header: 'Boarding Latitude',
+    render: (_, row) => Number(row.boarding_latitude ?? row.latitude).toFixed(7),
+  },
+  {
+    key: 'boarding_longitude',
+    header: 'Boarding Longitude',
+    render: (_, row) => Number(row.boarding_longitude ?? row.longitude).toFixed(7),
+  },
+  { key: 'boarding_address', header: 'Boarding Address', render: (_, row) => row.boarding_address || '-' },
+  {
+    key: 'created_at',
+    header: 'Created On',
+    render: (_, row) => (row.created_at ? dayjs(row.created_at).format('YYYY-MM-DD HH:mm') : '-'),
+  },
   {
     key: 'status',
     header: 'Status',
@@ -40,8 +64,12 @@ const columns = [
           setSelectedEmp(row);
           setIsStatusModalOpen(true);
         }}
-        className={`text-white px-2 py-1 rounded text-sm ${row.status === 'Active' ? 'bg-green-600' : 'bg-red-600'}`}>
-        {row.status}
+        className={`text-white px-2 py-1 rounded text-sm ${
+          row.active === 1 || (row.status && row.status.toString().toLowerCase() === 'active')
+            ? 'bg-green-600'
+            : 'bg-red-600'
+        }`}>
+        {row.active === 1 || (row.status && row.status.toString().toLowerCase() === 'active') ? 'Active' : 'Inactive'}
       </button>
     ),
   },
@@ -79,7 +107,7 @@ function Employee() {
   const fileInputRef = useRef();
 
   const company_id = localStorage.getItem('company_id');
-  const { employees } = useSelector((s) => s.employee);
+  const { employees, loading } = useSelector((s) => s.employee);
   const { departments } = useSelector((s) => s.department);
 
   const [page, setPage] = useState(0);
@@ -279,23 +307,31 @@ function Employee() {
         />
       </form>
 
-      <CommonTable
-        columns={columns.map((c) =>
-          c.key === 'status' ? { ...c, render: (_, row) => c.render(_, row, setSelectedEmp, setIsStatusModalOpen) } : c
-        )}
-        data={tableData}
-        page={page}
-        rowsPerPage={limit}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(val) => {
-          setLimit(val);
-          setPage(1);
-        }}
-        onEdit={handleEdit}
-        onDelete={(row) => handleDelete(row.actual_id)}
-        onView={handleView}
-      />
+      {loading ? (
+        <div className='flex justify-center items-center mb-4'>
+          <div className='text-[#07163d] font-medium text-lg py-2'>Loading...</div>
+        </div>
+      ) : (
+        <CommonTable
+          columns={columns.map((c) =>
+            c.key === 'status'
+              ? { ...c, render: (_, row) => c.render(_, row, setSelectedEmp, setIsStatusModalOpen) }
+              : c
+          )}
+          data={tableData}
+          page={page}
+          rowsPerPage={limit}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(val) => {
+            setLimit(val);
+            setPage(1);
+          }}
+          onEdit={handleEdit}
+          onDelete={(row) => handleDelete(row.actual_id)}
+          onView={handleView}
+        />
+      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ function VehicleForm() {
 
   const [formVal, setFormVal] = useState(initialFormVal);
 
+  // Driver dropdown options
   const {
     options: driverOptions,
     loading,
@@ -45,7 +46,7 @@ function VehicleForm() {
   useEffect(() => {
     if (rowData) {
       setFormVal({
-        selectedDriver: rowData.driverID || rowData.selectedDriver || '', // fallback for edit/create
+        selectedDriver: rowData.selectedDriver || rowData.driverID || '', // fallback for edit/create
         vehicleName: rowData.vehicleName || rowData.busName || '',
         vehicleNumber: rowData.vehicleNumber || rowData.busNumber || '',
         simNumber: rowData.simNumber || '',
@@ -86,7 +87,7 @@ function VehicleForm() {
       setFormVal(initialFormVal);
       navigate('/master/vehicle');
     } catch (err) {
-      toast.error(err || 'Something went wrong');
+      toast.error(err?.message || err || 'Something went wrong');
     }
   };
 
@@ -226,7 +227,7 @@ function VehicleForm() {
                   </label>
                   <TextField
                     size='small'
-                    type='text'
+                    type='number'
                     name='vehicleOverspeed'
                     id='vehicleOverspeed'
                     fullWidth
@@ -250,7 +251,7 @@ function VehicleForm() {
                   </label>
                   <TextField
                     size='small'
-                    type='text'
+                    type='number'
                     name='seats'
                     id='seats'
                     fullWidth
