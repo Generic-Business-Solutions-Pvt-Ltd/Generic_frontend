@@ -24,7 +24,8 @@ export const APIURL = {
   EMPONBOARD: 'emponboard',
 
   //DASHBOARD APIS
-  // TOTALCOUNT: 'dashboard/totalcount',
+  TOTALCOUNT: 'dashboard/totalcount',
+  TOTALONBOARDEMP: 'dashboardemp',
   DEPARTMENTANALYTICS: 'departmentanalytics',
   LATEARRIVAL: 'dashboardlatearrival',
   OVERSPEEDVIOLATION: 'speedviolation',

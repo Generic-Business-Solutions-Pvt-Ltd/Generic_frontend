@@ -1,11 +1,8 @@
 import authMiddleware from '../redux/middleware/authMiddleware';
 
-const resolveBaseUrl = () =>
-  window.location.pathname.startsWith('/dashboard') ? import.meta.env.VITE_BASE_URL_OLD : import.meta.env.VITE_BASE_URL;
-
 const buildUrl = (baseUrl, params) => {
-  const query = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
-  return resolveBaseUrl() + baseUrl + query;
+  const query = params && Object.keys(params).length ? '?' + new URLSearchParams(params) : '';
+  return import.meta.env.VITE_BASE_URL + baseUrl + query;
 };
 
 const getToken = () => localStorage.getItem('authToken');

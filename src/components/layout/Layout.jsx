@@ -10,9 +10,9 @@ function Layout() {
   const token = localStorage.getItem('authToken');
 
   useEffect(() => {
-    if (token && /(dashboard|multitrack)/.test(pathname)) {
+    if (token && (pathname.includes('dashboard') || pathname.includes('multitrack'))) {
       connectSocket(dispatch);
-      return () => disconnectSocket();
+      return disconnectSocket;
     }
     return disconnectSocket;
   }, [dispatch, token, pathname]);

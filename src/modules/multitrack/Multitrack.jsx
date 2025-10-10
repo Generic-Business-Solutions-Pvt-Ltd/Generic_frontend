@@ -1,11 +1,11 @@
 import { useDispatch } from 'react-redux';
+import { APIURL } from '../../constants';
 import { useEffect, useState } from 'react';
+import { Lastvehicledata } from '../../services';
 import MapComponent from './components/MapComponent';
 import TrackingPanel from './components/TrackingPanel';
 import MheStatusPanel from './components/MheStatusPanel';
 import { fetchLastVehicles, fetchVehicles } from '../../redux/vehicleSlice';
-import { APIURL } from '../../constants';
-import { Lastvehicledata } from '../../services';
 
 export default function Multitrack() {
   const dispatch = useDispatch();

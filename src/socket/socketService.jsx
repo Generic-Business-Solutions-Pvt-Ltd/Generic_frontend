@@ -5,8 +5,8 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 let socket = null;
 
 const connectSocket = (dispatch) => {
-  if (!SOCKET_URL) return Promise.reject(new Error('SOCKET_URL not defined'));
-  if (socket && socket.connected) return Promise.resolve(socket);
+  if (!SOCKET_URL) return Promise.reject(Error('SOCKET_URL not defined'));
+  if (socket?.connected) return Promise.resolve(socket);
 
   socket = io(SOCKET_URL, {
     transports: ['websocket', 'polling'],
@@ -20,7 +20,7 @@ const connectSocket = (dispatch) => {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       disconnectSocket();
-      reject(new Error('Socket connection timed out'));
+      reject(Error('Socket connection timed out'));
     }, 5000);
 
     socket.once('connect', () => {
@@ -32,26 +32,17 @@ const connectSocket = (dispatch) => {
       reject(err);
     });
 
-    socket.on('disconnect', () => {});
     socket.on('reconnect_failed', disconnectSocket);
 
     socket.off('gpsData');
-    socket.on('gpsData', (data) => {
-      try {
-        dispatch(updatedData(data));
-      } catch (e) {
-        // ignore
-      }
-    });
+    socket.on('gpsData', (data) => dispatch(updatedData(data)));
   });
 };
 
 const disconnectSocket = () => {
-  if (socket) {
-    socket.off('gpsData');
-    socket.disconnect();
-    socket = null;
-  }
+  socket?.off('gpsData');
+  socket?.disconnect();
+  socket = null;
 };
 
 export { connectSocket, disconnectSocket, socket };

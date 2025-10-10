@@ -3,7 +3,7 @@ import ReactApexChart from 'react-apexcharts';
 const EmployeeBoardingBarChart = ({ previousData, currentData, categories, text }) => (
   <ReactApexChart
     type='bar'
-    height={200}
+    height={225}
     series={[
       { name: 'Previous', data: previousData, color: '#4285f4' },
       { name: 'Current', data: currentData, color: '#db4437' },
