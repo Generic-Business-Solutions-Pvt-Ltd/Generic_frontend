@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import FilterOption from '../../../components/FilterOption';
 import ReportTable from '../../../components/table/ReportTable';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchGeofenceType, vehicleGeofenceReport } from '../../../redux/geofenceSlice';
+import { fetchVehicleGeoFence, vehicleGeofenceReport } from '../../../redux/geofenceSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
@@ -22,11 +22,11 @@ function GeofencEntryExit() {
   const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
-  const [filterData, setFilterData] = useState({ geofenceType: '', routes: [], fromDate: '', toDate: '' });
+  const [filterData, setFilterData] = useState({ geofences: [], routes: [], fromDate: '', toDate: '' });
 
   const company_id = localStorage.getItem('company_id');
   const { GeoFenceVehicleReport, loading, error } = useSelector((s) => s?.geofence);
-  const { geofenceTypes } = useSelector((state) => state?.geofence);
+  const { vehicleGeoFence } = useSelector((state) => state?.geofence);
   const { routes } = useSelector((state) => state?.vehicleRoute?.vehicleRoutes);
 
   useEffect(() => {
@@ -35,17 +35,13 @@ function GeofencEntryExit() {
   }, [dispatch, company_id, page, limit]);
 
   useEffect(() => {
-    if (company_id) dispatch(fetchGeofenceType({ company_id }));
+    if (company_id) dispatch(fetchVehicleGeoFence({ company_id, limit: 100 }));
   }, [dispatch, company_id]);
 
   let data = [];
   let totalCount = 0;
-  if (GeoFenceVehicleReport?.reports) {
-    data = Array.isArray(GeoFenceVehicleReport.reports)
-      ? GeoFenceVehicleReport.reports
-      : [GeoFenceVehicleReport.reports];
-    totalCount = GeoFenceVehicleReport.pagination?.total ?? data.length;
-  }
+  data = [].concat(GeoFenceVehicleReport?.reports || []);
+  totalCount = GeoFenceVehicleReport?.pagination?.total ?? data.length;
 
   data = data.map((item, i) => ({
     ...item,
@@ -72,7 +68,7 @@ function GeofencEntryExit() {
 
   const buildApiPayload = () => {
     const payload = { company_id };
-    if (filterData.geofenceType) payload.geofence_type = filterData.geofenceType;
+    if (filterData.geofences?.length) payload.geofences = JSON.stringify(filterData.geofences);
     if (filterData.routes?.length) payload.routes = JSON.stringify(filterData.routes);
     if (filterData.fromDate) payload.from_date = filterData.fromDate;
     if (filterData.toDate) payload.to_date = filterData.toDate;
@@ -86,7 +82,7 @@ function GeofencEntryExit() {
   };
 
   const handleFormReset = () => {
-    setFilterData({ geofenceTypes: [], routes: [], fromDate: '', toDate: '' });
+    setFilterData({ geofences: [], routes: [], fromDate: '', toDate: '' });
     setPage(0);
     dispatch(vehicleGeofenceReport({ page: 1, limit }));
   };
@@ -104,8 +100,9 @@ function GeofencEntryExit() {
           filterData={filterData}
           setFilterData={setFilterData}
           handleFormReset={handleFormReset}
-          geofenceTypes={geofenceTypes || [{ label: 'test', value: 'test' }]}
+          geofences={vehicleGeoFence?.geofences || []}
           routes={routes}
+          report={true}
         />
       </form>
       <ReportTable

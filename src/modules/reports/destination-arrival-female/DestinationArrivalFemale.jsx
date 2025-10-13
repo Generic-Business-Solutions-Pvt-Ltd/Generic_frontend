@@ -42,18 +42,20 @@ function DestinationArrivalFemale() {
   const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
+
+  // Multiselect filter for employees, plants, departments like EmployeeOnboard
   const [filterData, setFilterData] = useState({
     routes: [],
     vehicles: [],
     fromDate: '',
     toDate: '',
-    department: '',
-    employee: '',
-    plant: '',
+    departments: [],
+    employees: [],
+    plants: [],
   });
   const [filteredData, setFilteredData] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const { destinationArrivalFemales, loading, error } = useSelector((s) => s.employee);
   const { departments } = useSelector((s) => s.department);
   const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
@@ -67,32 +69,36 @@ function DestinationArrivalFemale() {
     if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 2000 }));
   }, [dispatch]);
 
-  useEffect(() => {
-    dispatch(fetchDestinationArrivalFemale({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.data || []));
-    });
-    // eslint-disable-next-line
-  }, [page, limit]);
-
   const buildApiPayload = () => {
-    const { fromDate, toDate, department, employee, routes, vehicles, plant } = filterData;
+    const { fromDate, toDate, departments, employees, routes, vehicles, plants } = filterData;
     const company_id = localStorage.getItem('company_id');
     const payload = { company_id };
-    if (department) payload.department = department;
-    if (employee) payload.employee = employee;
-    if (plant) payload.plant = plant;
-    if (routes?.length) payload.routes = JSON.stringify(routes);
-    if (vehicles?.length) payload.vehicles = JSON.stringify(vehicles);
+
+    payload.departments = departments?.length ? JSON.stringify(departments) : undefined;
+    payload.employees = employees?.length ? JSON.stringify(employees) : undefined;
+    payload.plants = plants?.length ? JSON.stringify(plants) : undefined;
+    payload.routes = JSON.stringify(Array.isArray(routes) ? routes : []);
+    payload.vehicles = JSON.stringify(Array.isArray(vehicles) ? vehicles : []);
+
     if (fromDate) payload.from_date = fromDate;
     if (toDate) payload.to_date = toDate;
     return payload;
   };
+
+  useEffect(() => {
+    dispatch(fetchDestinationArrivalFemale({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
+      setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
+    });
+    // eslint-disable-next-line
+  }, [page, limit]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
     setPage(0);
     dispatch(fetchDestinationArrivalFemale({ ...buildApiPayload(), page: 1, limit })).then((res) => {
       setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
     });
   };
 
@@ -102,15 +108,16 @@ function DestinationArrivalFemale() {
       vehicles: [],
       fromDate: '',
       toDate: '',
-      department: '',
-      employee: '',
-      plant: '',
+      departments: [],
+      employees: [],
+      plants: [],
     };
     setFilterData(cleared);
     setPage(0);
     const company_id = localStorage.getItem('company_id');
     dispatch(fetchDestinationArrivalFemale({ company_id, page: 1, limit })).then((res) => {
       setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
     });
   };
 
@@ -131,7 +138,9 @@ function DestinationArrivalFemale() {
 
   return (
     <div className='w-full h-full p-2'>
-      <h1 className='text-2xl font-bold mb-4 text-[#07163d]'>Arrival History Of Female Employees @ Destination</h1>
+      <h1 className='text-2xl font-bold mb-4 text-[#07163d]'>
+        Arrival History Of Female Employees @ Destination (Total: {totalCount})
+      </h1>
       <form onSubmit={handleFormSubmit}>
         <FilterOption
           handleExport={handleExport}
@@ -141,23 +150,22 @@ function DestinationArrivalFemale() {
           setFilterData={setFilterData}
           handleFormReset={handleFormReset}
           routes={routes}
-          departments={departments}
-          vehicles={routes}
-          employees={employees}
-          plants={plants}
+          departments={departments || []}
+          vehicles={routes || []}
+          employees={employees || []}
+          plants={plants || []}
+          report={true}
         />
       </form>
       <ReportTable
         columns={columns}
         data={filteredData}
-        loading={loading}
-        error={error}
         page={page}
         setPage={setPage}
         limit={limit}
         setLimit={setLimit}
         limitOptions={[10, 15, 20, 25, 30]}
-        totalCount={destinationArrivalFemales?.pagination?.total || 0}
+        totalCount={totalCount}
       />
     </div>
   );

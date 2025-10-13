@@ -38,21 +38,27 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
   }, []);
 
   const status = getStatus(v);
-
   const details = [
     ['Vehicle Name', v?.vehicle_name ?? '-'],
     ['Vehicle Number', v?.vehicle_number ?? '-'],
-    ['Route Name', v?.routes?.[0]?.name ?? '-'],
+    [
+      'Route Name',
+      Array.isArray(v?.routes) && v.routes.length > 0 ? v.routes[0]?.name ?? '-' : v?.route_details?.[0]?.name ?? '-',
+    ],
     ['Total Distance', getOdo(v)],
     ['Total Seats', v?.seats ?? '-'],
-    ['Assigned Seats', v?.routes?.[0]?.total_assigned_seat ?? '-'],
+    [
+      'Assigned Seats',
+      v?.route_details?.[0]?.total_assigned_seat ??
+        (Array.isArray(v?.routes) && v.routes[0]?.total_assigned_seat) ??
+        '-',
+    ],
     ['Onboarded Employee', '-'],
-    ['Speed', v?.speed ?? v?.speed_limit ?? '-'],
-    ['Driver Name', v?.driver ? `${v.driver.first_name || ''} ${v.driver.last_name || ''}`.trim() : '-'],
-    ['Driver Number', v?.driver?.phone_number ?? '-'],
+    ['Speed', typeof v?.speed === 'number' ? `${v.speed} km/h` : '-'],
+    ['Driver Name', v?.driver_name ?? v?.driver ?? '-'],
+    ['Driver Number', v?.driver_number ?? v?.driver?.number ?? '-'],
   ];
 
-  // 75% of viewport height, responsive, tailwind
   return (
     <>
       {isShowPanel && (

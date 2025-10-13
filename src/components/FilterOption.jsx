@@ -18,10 +18,11 @@ function FilterOption({
   plants = [],
   intervals = [],
   departments = [],
-  geofenceTypes = [],
+  geofences = [],
   statuses = [],
   setFile,
   isDate = true,
+  report = false,
 }) {
   const selectAllOpt = { label: 'Select All', value: 'SELECT_ALL' };
   const getOptions = (arr) => [selectAllOpt, ...arr];
@@ -49,7 +50,8 @@ function FilterOption({
     employees?.map((e) => ({ label: `${e.first_name || ''} ${e.last_name || ''}`.trim(), value: e.id })) || [];
   const vehicleOptions = vehicles?.map((v) => ({ label: v?.vehicle?.vehicle_number, value: v.vehicle_id })) || [];
   const routeOptions = routes?.map((r) => ({ label: r.name, value: r.id })) || [];
-  const plantOptions = plants?.map((p) => ({ label: p.label || p.name || p.plant_name, value: p.id })) || [];
+  const plantOptions = plants?.map((p) => ({ label: p.plant_name, value: p.id })) || [];
+  const geofenceOptions = geofences?.map((g) => ({ label: g.geofence_name, value: g.id }));
 
   const MultiSelect = ({ label, options, value, onChange }) => (
     <Autocomplete
@@ -110,22 +112,40 @@ function FilterOption({
         </AccordionSummary>
         <AccordionDetails>
           <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-            {employees.length > 0 && (
-              <SingleSelect
-                label='Select Employee'
-                options={employeeOptions}
-                value={filterData.employee || ''}
-                onChange={(v) => setFilterData({ ...filterData, employee: v })}
-              />
-            )}
-            {plants.length > 0 && (
-              <SingleSelect
-                label='Select Plant'
-                options={plantOptions}
-                value={filterData.plant || ''}
-                onChange={(v) => setFilterData({ ...filterData, plant: v })}
-              />
-            )}
+            {employees.length > 0 &&
+              (report ? (
+                <MultiSelect
+                  label='Select Employees'
+                  options={employeeOptions}
+                  value={filterData.employees || []}
+                  onChange={handleMultiChange('employees', employeeOptions)}
+                  selectedLen={Array.isArray(filterData.employees) ? filterData.employees.length : 0}
+                />
+              ) : (
+                <SingleSelect
+                  label='Select Employee'
+                  options={employeeOptions}
+                  value={filterData.employee || ''}
+                  onChange={(v) => setFilterData({ ...filterData, employee: v })}
+                />
+              ))}
+            {plants.length > 0 &&
+              (report ? (
+                <MultiSelect
+                  label='Select Plants'
+                  options={plantOptions}
+                  value={filterData.plants || []}
+                  onChange={handleMultiChange('plants', plantOptions)}
+                  selectedLen={Array.isArray(filterData.plants) ? filterData.plants.length : 0}
+                />
+              ) : (
+                <SingleSelect
+                  label='Select Plant'
+                  options={plantOptions}
+                  value={filterData.plant || ''}
+                  onChange={(v) => setFilterData({ ...filterData, plant: v })}
+                />
+              ))}
             {vehicles.length > 0 && (
               <MultiSelect
                 label='Select Vehicle Numbers'
@@ -144,14 +164,23 @@ function FilterOption({
                 selectedLen={Array.isArray(filterData.routes) ? filterData.routes.length : 0}
               />
             )}
-            {departments.length > 0 && (
-              <SingleSelect
-                label='Select Department'
-                options={departmentOptions}
-                value={filterData.department || ''}
-                onChange={(v) => setFilterData({ ...filterData, department: v })}
-              />
-            )}
+            {departments.length > 0 &&
+              (report ? (
+                <MultiSelect
+                  label='Select Departments'
+                  options={departmentOptions}
+                  value={filterData.departments || []}
+                  onChange={handleMultiChange('departments', departmentOptions)}
+                  selectedLen={Array.isArray(filterData.departments) ? filterData.departments.length : 0}
+                />
+              ) : (
+                <SingleSelect
+                  label='Select Department'
+                  options={departmentOptions}
+                  value={filterData.department || ''}
+                  onChange={(v) => setFilterData({ ...filterData, department: v })}
+                />
+              ))}
             {intervals.length > 0 && (
               <SingleSelect
                 label='Select Interval'
@@ -160,12 +189,13 @@ function FilterOption({
                 onChange={(v) => setFilterData({ ...filterData, interval: v })}
               />
             )}
-            {geofenceTypes.length > 0 && (
-              <SingleSelect
-                label='Select Geofence Type'
-                options={geofenceTypes}
-                value={filterData.geofenceType}
-                onChange={(v) => setFilterData({ ...filterData, geofenceType: v })}
+            {geofences.length > 0 && (
+              <MultiSelect
+                label='Select Geofences'
+                options={geofenceOptions}
+                value={filterData.geofences || []}
+                onChange={handleMultiChange('geofences', geofenceOptions)}
+                selectedLen={Array.isArray(filterData.geofences) ? filterData.geofences.length : 0}
               />
             )}
             {statuses.length > 0 && (
