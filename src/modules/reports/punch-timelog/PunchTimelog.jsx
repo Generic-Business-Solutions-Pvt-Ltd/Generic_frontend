@@ -6,68 +6,31 @@ import ReportTable from '../../../components/table/ReportTable';
 import { fetchPlants } from '../../../redux/plantSlice';
 import { fetchDepartments } from '../../../redux/departmentSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchEmployeeOnboard } from '../../../redux/employeeSlice';
+import { fetchAllEmployeeDetails } from '../../../redux/employeeSlice';
+import { fetchPuchLogReport } from '../../../redux/punchInOutSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
-  {
-    key: 'onboard_employee',
-    header: 'Employee Name',
-    render: (_v, r) => [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || '-',
-  },
+  { key: 'employee_name', header: 'Employee Name', render: (_v, r) => r.onboard_employee || r.first_name || '-' },
   { key: 'punch_id', header: 'RFID Tag', render: (v, r) => r.punch_id || '-' },
-  {
-    key: 'punch_time',
-    header: 'Punch Time',
-    render: (_v, r) => (r.created_at ? moment(r.created_at).format('hh:mm:ss A, DD-MM-YYYY') : '-'),
-  },
-  {
-    key: 'punch_status',
-    header: 'Punch Status',
-    render: (_v, r) =>
-      typeof r.punch_status !== 'undefined'
-        ? r.punch_status === true
-          ? 'In'
-          : r.punch_status === false
-          ? 'Out'
-          : r.punch_status
-        : '-',
-  },
-  {
-    key: 'vehicle_name',
-    header: 'Vehicle Name',
-    render: (v, r) => r.vehicle_name || '-',
-  },
-  {
-    key: 'vehicle_number',
-    header: 'Vehicle Number',
-    render: (v, r) => r.vehicle_number || '-',
-  },
-  {
-    key: 'location',
-    header: 'Location',
-    render: (_v, r) =>
-      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-',
-  },
+  { key: 'punch_time', header: 'Punch Time', render: (v, r) => v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-' },
+  { key: 'punch_status', header: 'Punch Status', render: (v) => v === true ? 'In' : v === false ? 'Out' : '-' },
+  { key: 'vehicle_name', header: 'Vehicle Name', render: (v, r) => r.vehicle_name || '-' },
+  { key: 'vehicle_number', header: 'Vehicle Number', render: (v, r) => r.vehicle_number || '-' },
+  { key: 'location', header: 'Location', render: (_v, r) => r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-' },
   {
     key: 'gmap',
     header: 'Google-map',
     render: (_v, r) =>
       r.latitude && r.longitude ? (
-        <a
-          href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`}
-          target='_blank'
-          className='text-blue-700'
-          rel='noopener noreferrer'>
+        <a href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`} target='_blank' className='text-blue-700' rel='noopener noreferrer'>
           Google Map
         </a>
-      ) : (
-        ''
-      ),
+      ) : (''),
   },
 ];
 
-function EmployeeOnboard() {
+function PunchTimelog() {
   const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
@@ -83,19 +46,18 @@ function EmployeeOnboard() {
   const [filteredData, setFilteredData] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
 
+  const { punchLogReportData, loading, error } = useSelector((s) => s.punchInOut);
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.onboardEmployees);
-  const error = useSelector((s) => s.employee.error);
-  const loading = useSelector((s) => s.employee.loading);
-  const { plants } = useSelector((s) => s.plant);
+  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails || []);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
+  const { plants } = useSelector((s) => s.plant);
 
   useEffect(() => {
     const company_id = localStorage.getItem('company_id');
     dispatch(fetchDepartments({ limit: 100 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 100 }));
-    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 2000 }));
+    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 2000 }));
   }, [dispatch]);
 
   const buildApiPayload = () => {
@@ -103,50 +65,41 @@ function EmployeeOnboard() {
     const company_id = localStorage.getItem('company_id');
     const payload = { company_id };
 
-    payload.departments = departments?.length ? JSON.stringify(departments) : undefined;
-    payload.employees = employees?.length ? JSON.stringify(employees) : undefined;
-    payload.plants = plants?.length ? JSON.stringify(plants) : undefined;
-    payload.routes = JSON.stringify(Array.isArray(routes) ? routes : []);
-    payload.vehicles = JSON.stringify(Array.isArray(vehicles) ? vehicles : []);
-
+    if (departments?.length) payload.departments = JSON.stringify(departments);
+    if (employees?.length) payload.employees = JSON.stringify(employees);
+    if (plants?.length) payload.plants = JSON.stringify(plants);
+    if (routes?.length) payload.routes = JSON.stringify(routes);
+    if (vehicles?.length) payload.vehicles = JSON.stringify(vehicles);
     if (fromDate) payload.from_date = fromDate;
     if (toDate) payload.to_date = toDate;
+
     return payload;
   };
 
   useEffect(() => {
-    dispatch(fetchEmployeeOnboard({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
+      setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
     });
-    // eslint-disable-next-line
   }, [page, limit]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
     setPage(0);
-    dispatch(fetchEmployeeOnboard({ ...buildApiPayload(), page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: 1, limit })).then((res) => {
+      setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
     });
   };
 
   const handleFormReset = () => {
-    const cleared = {
-      routes: [],
-      vehicles: [],
-      fromDate: '',
-      toDate: '',
-      departments: [],
-      employees: [],
-      plants: [],
-    };
+    const cleared = { routes: [], vehicles: [], fromDate: '', toDate: '', departments: [], employees: [], plants: [] };
     setFilterData(cleared);
     setPage(0);
     const company_id = localStorage.getItem('company_id');
-    dispatch(fetchEmployeeOnboard({ company_id, page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+    dispatch(fetchPuchLogReport({ company_id, page: 1, limit })).then((res) => {
+      setFilteredData([].concat(res?.payload?.data || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
     });
   };
 
@@ -154,14 +107,14 @@ function EmployeeOnboard() {
     exportToExcel({
       columns,
       rows: buildExportRows({ columns, data: filteredData }),
-      fileName: 'employee_onboard_report.xlsx',
+      fileName: 'punch_timelog_report.xlsx',
     });
 
   const handleExportPDF = () =>
     exportToPDF({
       columns,
       rows: buildExportRows({ columns, data: filteredData }),
-      fileName: 'employee_onboard_report.pdf',
+      fileName: 'punch_timelog_report.pdf',
       orientation: 'landscape',
     });
 
@@ -200,4 +153,4 @@ function EmployeeOnboard() {
   );
 }
 
-export default EmployeeOnboard;
+export default PunchTimelog;
