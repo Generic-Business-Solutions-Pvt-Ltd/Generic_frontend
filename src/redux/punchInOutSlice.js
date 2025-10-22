@@ -11,7 +11,10 @@ export const fetchPuchLogReport = createAsyncThunk('geofence/getVehicleGeofence'
 });
 
 const initialState = {
-  punchLogReportData: [],
+  punchLogs: [],
+  totalCount: 0,
+  loading: false,
+  error: null,
 };
 
 const punchInOutReducer = createSlice({
@@ -26,7 +29,8 @@ const punchInOutReducer = createSlice({
       })
       .addCase(fetchPuchLogReport.fulfilled, (state, action) => {
         state.loading = false;
-        state.punchLogReportData = action.payload;
+        state.punchLogs = action.payload?.data || [];
+        state.totalCount = action.payload?.pagination?.total || action.payload?.data?.length || 0;
       })
       .addCase(fetchPuchLogReport.rejected, (state, action) => {
         state.loading = false;

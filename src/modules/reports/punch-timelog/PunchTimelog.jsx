@@ -1,32 +1,43 @@
 import moment from 'moment-timezone';
-import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { fetchPlants } from '../../../redux/plantSlice';
+import { useEffect, useState, useCallback } from 'react';
 import FilterOption from '../../../components/FilterOption';
 import ReportTable from '../../../components/table/ReportTable';
-import { fetchPlants } from '../../../redux/plantSlice';
 import { fetchDepartments } from '../../../redux/departmentSlice';
+import { fetchPuchLogReport } from '../../../redux/punchInOutSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
 import { fetchAllEmployeeDetails } from '../../../redux/employeeSlice';
-import { fetchPuchLogReport } from '../../../redux/punchInOutSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
   { key: 'employee_name', header: 'Employee Name', render: (_v, r) => r.onboard_employee || r.first_name || '-' },
   { key: 'punch_id', header: 'RFID Tag', render: (v, r) => r.punch_id || '-' },
-  { key: 'punch_time', header: 'Punch Time', render: (v, r) => v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-' },
-  { key: 'punch_status', header: 'Punch Status', render: (v) => v === true ? 'In' : v === false ? 'Out' : '-' },
+  { key: 'punch_time', header: 'Punch Time', render: (v) => (v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-') },
+  { key: 'punch_status', header: 'Punch Status', render: (v) => (v === true ? 'In' : v === false ? 'Out' : '-') },
   { key: 'vehicle_name', header: 'Vehicle Name', render: (v, r) => r.vehicle_name || '-' },
   { key: 'vehicle_number', header: 'Vehicle Number', render: (v, r) => r.vehicle_number || '-' },
-  { key: 'location', header: 'Location', render: (_v, r) => r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-' },
+  {
+    key: 'location',
+    header: 'Location',
+    render: (_v, r) =>
+      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-',
+  },
   {
     key: 'gmap',
     header: 'Google-map',
     render: (_v, r) =>
       r.latitude && r.longitude ? (
-        <a href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`} target='_blank' className='text-blue-700' rel='noopener noreferrer'>
+        <a
+          href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`}
+          target='_blank'
+          className='text-blue-700'
+          rel='noopener noreferrer'>
           Google Map
         </a>
-      ) : (''),
+      ) : (
+        ''
+      ),
   },
 ];
 
@@ -43,10 +54,8 @@ function PunchTimelog() {
     employees: [],
     plants: [],
   });
-  const [filteredData, setFilteredData] = useState([]);
-  const [totalCount, setTotalCount] = useState(0);
 
-  const { punchLogReportData, loading, error } = useSelector((s) => s.punchInOut);
+  const { punchLogs, loading, error, totalCount } = useSelector((s) => s.punchInOut);
   const { departments } = useSelector((s) => s.department);
   const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails || []);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
@@ -57,10 +66,10 @@ function PunchTimelog() {
     dispatch(fetchDepartments({ limit: 100 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 100 }));
-    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 2000 }));
+    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
   }, [dispatch]);
 
-  const buildApiPayload = () => {
+  const buildApiPayload = useCallback(() => {
     const { fromDate, toDate, departments, employees, routes, vehicles, plants } = filterData;
     const company_id = localStorage.getItem('company_id');
     const payload = { company_id };
@@ -74,22 +83,16 @@ function PunchTimelog() {
     if (toDate) payload.to_date = toDate;
 
     return payload;
-  };
+  }, [filterData]);
 
   useEffect(() => {
-    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.data || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
-    });
-  }, [page, limit]);
+    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: page + 1, limit }));
+  }, [page, limit, buildApiPayload, dispatch]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
     setPage(0);
-    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.data || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
-    });
+    dispatch(fetchPuchLogReport({ ...buildApiPayload(), page: 1, limit }));
   };
 
   const handleFormReset = () => {
@@ -97,23 +100,20 @@ function PunchTimelog() {
     setFilterData(cleared);
     setPage(0);
     const company_id = localStorage.getItem('company_id');
-    dispatch(fetchPuchLogReport({ company_id, page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.data || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.data?.length || 0);
-    });
+    dispatch(fetchPuchLogReport({ company_id, page: 1, limit }));
   };
 
   const handleExport = () =>
     exportToExcel({
       columns,
-      rows: buildExportRows({ columns, data: filteredData }),
+      rows: buildExportRows({ columns, data: punchLogs }),
       fileName: 'punch_timelog_report.xlsx',
     });
 
   const handleExportPDF = () =>
     exportToPDF({
       columns,
-      rows: buildExportRows({ columns, data: filteredData }),
+      rows: buildExportRows({ columns, data: punchLogs }),
       fileName: 'punch_timelog_report.pdf',
       orientation: 'landscape',
     });
@@ -139,7 +139,7 @@ function PunchTimelog() {
       </form>
       <ReportTable
         columns={columns}
-        data={filteredData}
+        data={punchLogs}
         loading={loading}
         error={error}
         page={page}

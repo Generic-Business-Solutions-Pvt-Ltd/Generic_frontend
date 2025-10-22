@@ -95,7 +95,7 @@ function EmployeeOnboard() {
     dispatch(fetchDepartments({ limit: 100 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 100 }));
-    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 2000 }));
+    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
   }, [dispatch]);
 
   const buildApiPayload = () => {

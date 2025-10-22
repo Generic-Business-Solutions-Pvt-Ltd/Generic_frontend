@@ -8,30 +8,21 @@ import VisualDisplayIcon from '../../../assets/visual_display.png';
 import washingMachineIcon from '../../../assets/washing_machine.png';
 import airConditionerIcon from '../../../assets/air_conditioner.png';
 
-const icons = {
-  refrigerator: refrigeratorIcon,
-  washingmachine: washingMachineIcon,
-  airconditioners: airConditionerIcon,
-  visualdisplay: VisualDisplayIcon,
-  computer: computerIcon,
-  support: supportIcon,
+const DEPTS = {
+  AC: { label: 'Air Conditioner', icon: airConditionerIcon },
+  WM: { label: 'Washing Machine', icon: washingMachineIcon },
+  VD: { label: 'Visual Display', icon: VisualDisplayIcon },
+  COMP: { label: 'Computer', icon: computerIcon },
+  REF: { label: 'Refrigerator', icon: refrigeratorIcon },
+  SUPPORT: { label: 'Support', icon: supportIcon },
 };
 
-const normalizeKey = (str) =>
-  str
-    ?.toLowerCase()
-    .replace(/\s/g, '')
-    .replace(/[^a-z]/g, '');
-
 export default function DepartmentStats() {
-  const [departments, setDepartments] = useState(),
+  const [departments, setDepartments] = useState([]),
     [loading, setLoading] = useState(true);
-
   useEffect(() => {
     ApiService.get(APIURL.DEPARTMENTANALYTICS, { company_id: localStorage.getItem('company_id') }).then((res) => {
-      setDepartments(
-        res?.success && Array.isArray(res.data) ? res.data.filter((d) => icons[normalizeKey(d.department_name)]) : []
-      );
+      setDepartments(res?.success && Array.isArray(res.data) ? res.data.filter((d) => DEPTS[d.department_name]) : []);
       setLoading(false);
     });
   }, []);
@@ -46,13 +37,16 @@ export default function DepartmentStats() {
         </div>
       ) : (
         <div className='my-4 grid grid-cols-3 gap-y-6'>
-          {(departments || []).slice(0, 6).map((dept, i) => (
-            <div key={i} className='flex flex-col items-center'>
-              <img src={icons[normalizeKey(dept.department_name)]} alt={dept.department_name} className='w-10' />
-              <span>{dept.count}</span>
-              <p className='text-sm capitalize'>{dept.department_name.trim()}</p>
-            </div>
-          ))}
+          {departments.slice(0, 6).map((d, i) => {
+            const { label, icon } = DEPTS[d.department_name];
+            return (
+              <div key={i} className='flex flex-col items-center'>
+                <img src={icon} alt={label} className='w-10' />
+                <span>{d.count}</span>
+                <p className='text-sm capitalize'>{label}</p>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
