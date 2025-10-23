@@ -29,7 +29,7 @@ export const processVehicles = (vehicles) => {
       : 'Unknown';
 
     return {
-      id: v.id ?? Math.random(),
+      id: v.id || v.vehicle_id,
       vehicle_name: v.vehicle_name ?? 'Unknown',
       timestamp: localTime,
       speed_limit: v.speed || 0,

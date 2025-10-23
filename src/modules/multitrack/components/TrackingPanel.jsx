@@ -1,11 +1,11 @@
+import { useState, useMemo } from 'react';
 import { CheckBox } from '@mui/icons-material';
 import ArrowLeftIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowRightIcon from '@mui/icons-material/ArrowForwardIos';
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { FaBatteryFull, FaBolt, FaKey, FaWifi } from 'react-icons/fa';
 import ISearch, { LateSvg, OnTimeSvg, TotalSvg } from './ISearch';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
-import { setActiveTab, setIsTrackShow, setProcessedVehicles } from '../../../redux/multiTrackSlice';
+import { FaBatteryFull, FaBolt, FaKey, FaWifi } from 'react-icons/fa';
+import { setActiveTab, setIsTrackShow } from '../../../redux/multiTrackSlice';
 
 const statusTabs = [
   { label: 'Running', bg: '#00800026', color: 'green' },
@@ -56,15 +56,6 @@ const TrackingPanel = ({ handleRightPanel }) => {
     selectTrackingPanelState,
     shallowEqual
   );
-
-  const lastDataRef = useRef();
-  useEffect(() => {
-    const data = vehicles?.data;
-    if (Array.isArray(data) && data.length && lastDataRef.current !== data) {
-      dispatch(setProcessedVehicles(data));
-      lastDataRef.current = data;
-    }
-  }, [vehicles?.data, dispatch]);
 
   const tabCounts = useMemo(
     () => ({

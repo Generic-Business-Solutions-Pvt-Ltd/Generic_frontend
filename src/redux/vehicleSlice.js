@@ -78,7 +78,7 @@ export const vehicleReducer = createSlice({
       .addCase(fetchVehicles.fulfilled, (state, action) => {
         const vehicles = action.payload?.data?.vehicles || action.payload?.data || action.payload || [];
         state.vehicles.data = vehicles;
-        state.newDevices = vehicles.map((v) => ({ imei_number: v.imei_number }));
+        state.newDevices = vehicles?.map((v) => ({ imei_number: v.imei_number }));
         state.loading = false;
       })
       .addCase(fetchVehicles.rejected, (state, action) => {
