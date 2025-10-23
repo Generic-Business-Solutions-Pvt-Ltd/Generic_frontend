@@ -42,10 +42,7 @@ export const useFetchVehicles = () => {
           lastData.push(...results.flatMap((r) => (r?.success ? r.data : [])));
         }
 
-        const enriched = lastData.filter(Boolean).map((item) => ({
-          ...item,
-          vehicle_name: imeiToName[item.imei] || null,
-        }));
+        const enriched = lastData.map((item) => ({ ...item, vehicle_name: imeiToName[item?.imei] || null }));
 
         if (mounted && !shallowEqual(lastDataRef.current, enriched)) {
           lastDataRef.current = enriched;

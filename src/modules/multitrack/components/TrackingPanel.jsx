@@ -23,20 +23,24 @@ const iconStatus = [
   { Icon: FaBolt, key: (d) => (d.lat ? d.hasExternalPower : null) },
 ];
 
-const selectTrackingPanelState = (s) => ({
-  vehicles: s.vehicle.vehicles,
-  newDevices: s.vehicle.newDevices,
+const selectState = (s) => ({
+  devices: s.multiTrackStatus.devices,
+  newDevices: s.multiTrackStatus.newDevices,
   running: s.multiTrackStatus.runningDevices,
   parked: s.multiTrackStatus.parkedDevices,
   idle: s.multiTrackStatus.idelDevices,
-  devices: s.multiTrackStatus.devices,
   activeTab: s.multiTrackStatus.activeTab,
   offline: s.multiTrackStatus.offlineVehicleData,
   isTrackShow: s.multiTrackStatus.isTrackShow,
 });
 
+const dedupe = (arr) => {
+  const seen = new Set();
+  return (arr || []).filter((item) => item?.id && !seen.has(item.id) && seen.add(item.id));
+};
+
 const StatCard = ({ icon, label, value, bg, color }) => (
-  <div className={`flex flex-row w-1/3 items-center gap-2 shadow-sm`} style={{ background: bg }}>
+  <div className='flex flex-row w-1/3 items-center gap-2 shadow-sm' style={{ background: bg }}>
     <div className='pl-2'>{icon}</div>
     <div>
       <p className='text-sm' style={{ color }}>
@@ -52,48 +56,41 @@ const StatCard = ({ icon, label, value, bg, color }) => (
 const TrackingPanel = ({ handleRightPanel }) => {
   const dispatch = useDispatch();
   const [search, setSearch] = useState('');
-  const { vehicles, newDevices, running, parked, idle, devices, activeTab, offline, isTrackShow } = useSelector(
-    selectTrackingPanelState,
+  const { devices, newDevices, running, parked, idle, activeTab, offline, isTrackShow } = useSelector(
+    selectState,
     shallowEqual
   );
 
-  const tabCounts = useMemo(
+  const cleaned = useMemo(
     () => ({
-      Running: running.length,
-      Idle: idle.length,
-      Parked: parked.length,
-      Offline: offline.length,
-      New: newDevices.length,
-      All: vehicles?.data?.length || devices.length,
+      Running: dedupe(running),
+      Idle: dedupe(idle),
+      Parked: dedupe(parked),
+      Offline: dedupe(offline),
+      New: dedupe(newDevices),
+      All: devices || [],
     }),
-    [running, idle, parked, offline, newDevices, vehicles?.data, devices.length]
+    [devices, newDevices, running, parked, idle, offline]
   );
 
-  const filteredDevices = useMemo(
-    () =>
-      ({
-        Running: running,
-        Idle: idle,
-        Parked: parked,
-        Offline: offline,
-        New: newDevices,
-        All: devices,
-      }[activeTab] || []),
-    [activeTab, running, idle, parked, offline, newDevices, devices]
+  const tabCounts = useMemo(
+    () => Object.fromEntries(statusTabs.map((t) => [t.label, cleaned[t.label]?.length || 0])),
+    [cleaned]
   );
+
+  const filtered = useMemo(() => cleaned[activeTab] || [], [cleaned, activeTab]);
 
   const shownDevices = useMemo(
     () =>
-      !search
-        ? filteredDevices
-        : filteredDevices.filter((d) => d.vehicle_name?.toLowerCase().includes(search.toLowerCase())),
-    [search, filteredDevices]
+      dedupe(!search ? filtered : filtered.filter((d) => d.vehicle_name?.toLowerCase().includes(search.toLowerCase()))),
+    [search, filtered]
   );
 
   return (
     <div
-      className={`absolute transition-all top-0 left-0 rounded-md bg-white h-full p-3 z-[99999] w-[452px] flex flex-col 
-        ${isTrackShow ? '-translate-x-[452px]' : ''}`}
+      className={`absolute transition-all top-0 left-0 rounded-md bg-white h-full p-3 z-[99999] w-[452px] flex flex-col ${
+        isTrackShow ? '-translate-x-[452px]' : ''
+      }`}
       style={{ minHeight: 0 }}>
       <div
         className='absolute top-10 -right-5 h-14 bg-[#FFF] cursor-pointer rounded-tr-lg rounded-br-lg text-4xl flex items-center justify-center'
@@ -101,7 +98,7 @@ const TrackingPanel = ({ handleRightPanel }) => {
         {isTrackShow ? <ArrowRightIcon /> : <ArrowLeftIcon />}
       </div>
       <div className='w-full rounded-sm overflow-hidden mb-2 flex justify-between items-center relative'>
-        <StatCard icon={<TotalSvg />} label='Total' value={vehicles?.data?.length || 0} bg='#e7e5e6' />
+        <StatCard icon={<TotalSvg />} label='Total' value={cleaned.All.length} bg='#e7e5e6' />
         <StatCard icon={<OnTimeSvg />} label='On time' value='-' bg='#00800026' color='#0e7c13' />
         <StatCard icon={<LateSvg />} label='Late' value='-' bg='#FF000026' color='#d70b0b' />
       </div>
@@ -110,7 +107,10 @@ const TrackingPanel = ({ handleRightPanel }) => {
           {statusTabs.map((tab) => (
             <button
               key={tab.label}
-              onClick={() => dispatch(setActiveTab(tab.label))}
+              onClick={() => {
+                dispatch(setActiveTab(tab.label));
+                setSearch('');
+              }}
               className={`flex-1 flex flex-col items-center cursor-pointer p-1 h-13 rounded-tr-md transition-all duration-200 ${
                 activeTab === tab.label ? 'border-b-4' : ''
               }`}
@@ -125,7 +125,7 @@ const TrackingPanel = ({ handleRightPanel }) => {
           ))}
         </div>
         <div className='p-1 border-b border-gray-300'>
-          <ISearch onChange={(e) => setSearch(e.target.value)} />
+          <ISearch onChange={(e) => setSearch(e.target.value)} value={search} />
         </div>
         <div className='mhe-list p-2 mt-2 flex-1 min-h-0 overflow-y-auto'>
           {shownDevices.map((device) => (
@@ -145,8 +145,12 @@ const TrackingPanel = ({ handleRightPanel }) => {
               <span className='w-8 text-center text-sm'>{device.speed}</span>
               {iconStatus.map(({ Icon, key }, i) => {
                 const status = key(device);
-                let cls = 'text-gray-400 text-[15px]';
-                if (status !== null) cls = status ? 'text-green-600 text-[15px]' : 'text-red-400 text-[15px]';
+                const cls =
+                  status == null
+                    ? 'text-gray-400 text-[15px]'
+                    : status
+                    ? 'text-green-600 text-[15px]'
+                    : 'text-red-400 text-[15px]';
                 return (
                   <span key={i} className='w-8 text-center'>
                     <Icon className={cls} />

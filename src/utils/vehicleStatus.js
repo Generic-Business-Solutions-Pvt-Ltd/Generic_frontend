@@ -3,11 +3,13 @@ const isOneHourOld = (date) => {
   return !date || isNaN(t) ? false : Date.now() - t.getTime() > 3600000;
 };
 
-const colorOfDot = (ign, mov, time) => {
+const colorOfDot = (ign, mov, time, isNew) => {
+  if (isNew) return 'gray';
   if (isOneHourOld(time)) return 'rgb(0,0,255)';
   if (ign && mov) return 'rgb(0,128,0)';
   if (ign && !mov) return 'rgb(255, 255, 0)';
   if (!ign && !mov) return 'rgb(255, 0, 0)';
+  return 'gray';
 };
 
 const getOdo = (v) => {
@@ -23,18 +25,25 @@ export const processVehicles = (vehicles) => {
     const movement = get(240) === 1;
     const localTime = v.timestamp && !isNaN(new Date(v.timestamp)) ? new Date(v.timestamp).toISOString() : '';
 
-    const status = isOneHourOld(localTime)
-      ? 'Offline'
-      : ignition && movement
-      ? 'Running'
-      : ignition
-      ? 'Idle'
-      : !ignition && !movement
-      ? 'Parked'
-      : 'Unknown';
+    const isNew = !localTime || v.latitude == null || v.longitude == null;
+
+    let status;
+    if (isNew) {
+      status = 'New';
+    } else if (isOneHourOld(localTime)) {
+      status = 'Offline';
+    } else if (ignition && movement) {
+      status = 'Running';
+    } else if (ignition && !movement) {
+      status = 'Idle';
+    } else if (!ignition && !movement) {
+      status = 'Parked';
+    } else {
+      status = 'Unknown';
+    }
 
     return {
-      id: v.vehicle_id || v.id || '-',
+      id: v.vehicle_id ?? v.id ?? v.imei ?? v.imei_number ?? Math.random().toString(36).slice(2, 9),
       vehicle_name: v.vehicle_name ?? '-',
       vehicle_number: v.vehicle_number ?? '-',
       route_name:
@@ -59,7 +68,7 @@ export const processVehicles = (vehicles) => {
       hasBattery: get(68) > 0,
       hasExternalPower: get(66) > 0,
       movement,
-      color: colorOfDot(ignition, movement, localTime),
+      color: colorOfDot(ignition, movement, localTime, isNew),
       isOffline: isOneHourOld(localTime),
       status,
     };
@@ -71,5 +80,6 @@ export const processVehicles = (vehicles) => {
     idelDevices: devices.filter((d) => d.status === 'Idle'),
     parkedDevices: devices.filter((d) => d.status === 'Parked'),
     offlineVehicleData: devices.filter((d) => d.status === 'Offline'),
+    newDevices: devices.filter((d) => d.status === 'New'),
   };
 };

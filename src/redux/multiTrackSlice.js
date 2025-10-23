@@ -7,6 +7,7 @@ const initialState = {
   parkedDevices: [],
   idelDevices: [],
   offlineVehicleData: [],
+  newDevices: [],
   activeTab: 'All',
   isTrackShow: false,
   isProcessed: false,
@@ -23,6 +24,7 @@ const multiTrackSlice = createSlice({
       state.idelDevices = result.idelDevices;
       state.parkedDevices = result.parkedDevices;
       state.offlineVehicleData = result.offlineVehicleData;
+      state.newDevices = result.newDevices;
       state.isProcessed = true;
     },
     setActiveTab(state, action) {
