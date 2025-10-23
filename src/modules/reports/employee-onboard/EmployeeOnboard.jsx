@@ -19,7 +19,7 @@ const columns = [
   {
     key: 'punch_time',
     header: 'Punch Time',
-    render: (_v, r) => (r.created_at ? moment(r.created_at).format('hh:mm:ss A, DD-MM-YYYY') : '-'),
+    render: (_v, r) => (r.punch_time ? moment(r.punch_time).format('hh:mm:ss A, DD-MM-YYYY') : '-'),
   },
   {
     key: 'punch_status',
