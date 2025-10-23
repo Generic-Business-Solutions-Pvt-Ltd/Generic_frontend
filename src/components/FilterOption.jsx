@@ -24,15 +24,15 @@ function FilterOption({
   isDate = true,
   report = false,
 }) {
+  const toArray = (v) => (Array.isArray(v) ? v : []);
   const selectAllOpt = { label: 'Select All', value: 'SELECT_ALL' };
   const getOptions = (arr) => [selectAllOpt, ...arr];
-
-  const getDisplay = (selected, all) => {
-    if (!Array.isArray(selected) || !selected.length) return [];
-    if (selected.length === all.length) return [selectAllOpt];
-    return all.filter((o) => selected.includes(o.value));
-  };
-
+  const getDisplay = (selected, all) =>
+    !Array.isArray(selected) || !selected.length
+      ? []
+      : selected.length === all.length
+      ? [selectAllOpt]
+      : all.filter((o) => selected.includes(o.value));
   const handleMultiChange = (key, all) => (_, nv) => {
     const isAll = nv.some((o) => o.value === 'SELECT_ALL');
     setFilterData({
@@ -45,27 +45,31 @@ function FilterOption({
     });
   };
 
-  const departmentOptions = departments?.map((d) => ({ label: d.department_name, value: d.id })) || [];
-  const employeeOptions =
-    employees?.map((e) => ({ label: `${e.first_name || ''} ${e.last_name || ''}`.trim(), value: e.id })) || [];
-  const vehicleOptions = vehicles?.map((v) => ({ label: v?.vehicle?.vehicle_number, value: v.vehicle_id })) || [];
-  const routeOptions = routes?.map((r) => ({ label: r.name, value: r.id })) || [];
-  const plantOptions = plants?.map((p) => ({ label: p.plant_name, value: p.id })) || [];
-  const geofenceOptions = geofences?.map((g) => ({ label: g.geofence_name, value: g.id }));
+  const employeeOptions = toArray(employees).map((e) => ({
+    label: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+    value: e.id,
+  }));
+  const vehicleOptions = toArray(vehicles).map((v) => ({ label: v?.vehicle?.vehicle_number, value: v.vehicle_id }));
+  const routeOptions = toArray(routes).map((r) => ({ label: r.name, value: r.id }));
+  const plantOptions = toArray(plants).map((p) => ({ label: p.plant_name, value: p.id }));
+  const departmentOptions = toArray(departments).map((d) => ({ label: d.department_name, value: d.id }));
+  const geofenceOptions = toArray(geofences).map((g) => ({ label: g.geofence_name, value: g.id }));
+  const intervalOptions = toArray(intervals);
+  const statusOptions = toArray(statuses);
 
   const MultiSelect = ({ label, options, value, onChange }) => (
     <Autocomplete
       multiple
       disablePortal
-      options={getOptions(options)}
-      size='small'
       fullWidth
+      size='small'
       disableCloseOnSelect
+      options={getOptions(options)}
       renderInput={(params) => <TextField {...params} label={label} />}
       isOptionEqualToValue={(o, v) => o.value === v.value}
       getOptionLabel={(o) => o.label}
-      onChange={onChange}
       value={getDisplay(value, options)}
+      onChange={onChange}
       renderOption={(props, option) => (
         <li {...props} key={option.value}>
           <Checkbox
@@ -89,13 +93,12 @@ function FilterOption({
       }
     />
   );
-
   const SingleSelect = ({ label, options, value, onChange }) => (
     <Autocomplete
       disablePortal
-      options={options}
-      size='small'
       fullWidth
+      size='small'
+      options={options}
       renderInput={(params) => <TextField {...params} label={label} />}
       isOptionEqualToValue={(o, v) => o.value === v}
       getOptionLabel={(o) => o.label}
@@ -112,14 +115,13 @@ function FilterOption({
         </AccordionSummary>
         <AccordionDetails>
           <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-            {employees.length > 0 &&
+            {employeeOptions.length > 0 &&
               (report ? (
                 <MultiSelect
                   label='Select Employees'
                   options={employeeOptions}
                   value={filterData.employees || []}
                   onChange={handleMultiChange('employees', employeeOptions)}
-                  selectedLen={Array.isArray(filterData.employees) ? filterData.employees.length : 0}
                 />
               ) : (
                 <SingleSelect
@@ -129,14 +131,13 @@ function FilterOption({
                   onChange={(v) => setFilterData({ ...filterData, employee: v })}
                 />
               ))}
-            {plants.length > 0 &&
+            {plantOptions.length > 0 &&
               (report ? (
                 <MultiSelect
                   label='Select Plants'
                   options={plantOptions}
                   value={filterData.plants || []}
                   onChange={handleMultiChange('plants', plantOptions)}
-                  selectedLen={Array.isArray(filterData.plants) ? filterData.plants.length : 0}
                 />
               ) : (
                 <SingleSelect
@@ -146,32 +147,29 @@ function FilterOption({
                   onChange={(v) => setFilterData({ ...filterData, plant: v })}
                 />
               ))}
-            {vehicles.length > 0 && (
+            {vehicleOptions.length > 0 && (
               <MultiSelect
                 label='Select Vehicle Numbers'
                 options={vehicleOptions}
                 value={filterData.vehicles || []}
                 onChange={handleMultiChange('vehicles', vehicleOptions)}
-                selectedLen={Array.isArray(filterData.vehicles) ? filterData.vehicles.length : 0}
               />
             )}
-            {routes.length > 0 && (
+            {routeOptions.length > 0 && (
               <MultiSelect
                 label='Select Vehicle Routes'
                 options={routeOptions}
                 value={filterData.routes || []}
                 onChange={handleMultiChange('routes', routeOptions)}
-                selectedLen={Array.isArray(filterData.routes) ? filterData.routes.length : 0}
               />
             )}
-            {departments.length > 0 &&
+            {departmentOptions.length > 0 &&
               (report ? (
                 <MultiSelect
                   label='Select Departments'
                   options={departmentOptions}
                   value={filterData.departments || []}
                   onChange={handleMultiChange('departments', departmentOptions)}
-                  selectedLen={Array.isArray(filterData.departments) ? filterData.departments.length : 0}
                 />
               ) : (
                 <SingleSelect
@@ -181,27 +179,26 @@ function FilterOption({
                   onChange={(v) => setFilterData({ ...filterData, department: v })}
                 />
               ))}
-            {intervals.length > 0 && (
+            {intervalOptions.length > 0 && (
               <SingleSelect
                 label='Select Interval'
-                options={intervals}
+                options={intervalOptions}
                 value={filterData.interval}
                 onChange={(v) => setFilterData({ ...filterData, interval: v })}
               />
             )}
-            {geofences.length > 0 && (
+            {geofenceOptions.length > 0 && (
               <MultiSelect
                 label='Select Geofences'
                 options={geofenceOptions}
                 value={filterData.geofences || []}
                 onChange={handleMultiChange('geofences', geofenceOptions)}
-                selectedLen={Array.isArray(filterData.geofences) ? filterData.geofences.length : 0}
               />
             )}
-            {statuses.length > 0 && (
+            {statusOptions.length > 0 && (
               <SingleSelect
                 label='Select Status'
-                options={statuses}
+                options={statusOptions}
                 value={filterData.status || ''}
                 onChange={(v) => setFilterData({ ...filterData, status: v })}
               />

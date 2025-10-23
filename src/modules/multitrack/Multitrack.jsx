@@ -13,12 +13,12 @@ export default function Multitrack() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   useEffect(() => {
-    let intervalId;
-    let fetched = false;
+    const fetchedRef = { current: false };
 
     const fetchData = async () => {
-      if (fetched) return;
-      fetched = true;
+      if (fetchedRef.current) return;
+      fetchedRef.current = true;
+
       const token = localStorage.getItem('authToken');
       const company_id = localStorage.getItem('company_id');
       if (!token || !company_id) return;
@@ -40,14 +40,14 @@ export default function Multitrack() {
           const results = await Promise.all(
             chunk.map((imei) => Lastvehicledata.get(`${APIURL.LASTVEHICLEDATA}?imei=${imei}`).catch(() => null))
           );
-          const valid = results.filter((d) => d?.success);
-          if (valid.length) dispatch(fetchLastVehicles(valid));
+          const validData = results.flatMap((r) => (r?.success ? r.data : []));
+          if (validData.length) dispatch(fetchLastVehicles(validData));
         }
       }
     };
 
     fetchData();
-    intervalId = setInterval(fetchData, 60000);
+    const intervalId = setInterval(fetchData, 100000);
 
     return () => clearInterval(intervalId);
   }, [dispatch]);
