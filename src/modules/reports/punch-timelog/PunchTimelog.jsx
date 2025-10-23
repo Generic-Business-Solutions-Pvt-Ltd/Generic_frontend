@@ -11,7 +11,11 @@ import { fetchEmployeeOnboard } from '../../../redux/employeeSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
-  { key: 'employee_name', header: 'Employee Name', render: (_v, r) => r.onboard_employee || r.first_name || '-' },
+  {
+    key: 'employee_name',
+    header: 'Employee Name',
+    render: (_v, r) => [r.first_name, r.last_name].filter(Boolean).join(' ') || '-',
+  },
   { key: 'punch_id', header: 'RFID Tag', render: (v, r) => r.punch_id || '-' },
   { key: 'punch_time', header: 'Punch Time', render: (v) => (v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-') },
   { key: 'punch_status', header: 'Punch Status', render: (v) => (v === true ? 'In' : v === false ? 'Out' : '-') },
@@ -21,7 +25,7 @@ const columns = [
     key: 'location',
     header: 'Location',
     render: (_v, r) =>
-      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-',
+      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(7)}, ${Number(r.longitude).toFixed(7)}` : '-',
   },
   {
     key: 'gmap',
