@@ -10,6 +10,11 @@ const colorOfDot = (ign, mov, time) => {
   if (!ign && !mov) return 'rgb(255, 0, 0)';
 };
 
+const getOdo = (v) => {
+  const el = v?.ioElements?.find((e) => e.propertyName === 'totalOdometer');
+  return el && Number(el.value) ? `${(el.value / 1000).toFixed(2)} km` : '-';
+};
+
 export const processVehicles = (vehicles) => {
   const devices = (vehicles || []).filter(Boolean).map((v) => {
     const io = Array.isArray(v.ioElements) ? v.ioElements : [];
@@ -29,11 +34,24 @@ export const processVehicles = (vehicles) => {
       : 'Unknown';
 
     return {
-      id: v.id || v.vehicle_id,
-      vehicle_name: v.vehicle_name ?? 'Unknown',
+      id: v.vehicle_id || v.id || '-',
+      vehicle_name: v.vehicle_name ?? '-',
+      vehicle_number: v.vehicle_number ?? '-',
+      route_name:
+        Array.isArray(v.routes) && v.routes.length > 0 ? v.routes[0]?.name ?? '-' : v.route_details?.[0]?.name ?? '-',
+      total_distance: getOdo(v),
+      seats: v.seats ?? '-',
+      assigned_seats:
+        v.route_details?.[0]?.total_assigned_seat ??
+        (Array.isArray(v.routes) && v.routes[0]?.total_assigned_seat) ??
+        '-',
+      onboarded_employee: '-',
+      speed: typeof v.speed === 'number' ? `${v.speed} km/h` : '-',
+      driver_name: v.driver_name ?? v.driver ?? '-',
+      driver_number: v.driver_number ?? v.driver?.number ?? '-',
+      address: v.address ?? '-',
       timestamp: localTime,
       speed_limit: v.speed || 0,
-      speed: v.speed || 0,
       lat: v.latitude || 0,
       lng: v.longitude || 0,
       hasGPS: v.latitude != null && v.longitude != null,

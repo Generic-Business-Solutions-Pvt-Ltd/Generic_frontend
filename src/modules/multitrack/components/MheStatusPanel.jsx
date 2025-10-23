@@ -2,7 +2,6 @@ import moment from 'moment-timezone';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ArrowRightIcon from '@mui/icons-material/ArrowForwardIos';
-import { useSelector } from 'react-redux';
 
 const statusColorMap = {
   Running: '#008000',
@@ -13,50 +12,29 @@ const statusColorMap = {
   Unknown: '#000000',
 };
 
-const getStatus = (v) => {
-  if (!v) return 'Unknown';
-  if (typeof v.speed === 'number') {
-    if (v.speed > 0) return 'Running';
-    if (v.speed === 0) return 'Parked';
-  }
-  if (!v.timestamp) return 'Offline';
-  return 'Idle';
-};
-
-const getOdo = (v) => {
-  const el = v?.ioElements?.find((e) => e.propertyName === 'totalOdometer');
-  return el && Number(el.value) ? `${(el.value / 1000).toFixed(2)} km` : '-';
-};
-
 const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
-  const { vehicles } = useSelector((state) => state.vehicle);
   const [currentDateTime, setCurrentDateTime] = useState('');
-  const v = vehicles?.data.find((x) => x.id === vehicle?.id);
 
   useEffect(() => {
     setCurrentDateTime(moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm'));
   }, []);
 
-  const status = getStatus(v);
+  const status = vehicle?.status ?? 'Unknown';
+
   const details = [
-    ['Vehicle Name', v?.vehicle_name ?? '-'],
-    ['Vehicle Number', v?.vehicle_number ?? '-'],
-    [
-      'Route Name',
-      Array.isArray(v?.routes) && v.routes.length > 0 ? v.routes[0]?.name ?? '-' : v?.route_details?.[0]?.name ?? '-',
-    ],
-    ['Total Distance', getOdo(v)],
-    ['Total Seats', v?.seats ?? '-'],
+    ['Vehicle Name', vehicle?.vehicle_name ?? '-'],
+    ['Vehicle Number', vehicle?.vehicle_number ?? '-'],
+    ['Route Name', vehicle?.route_name ?? '-'],
+    ['Total Distance', vehicle?.total_distance ?? '-'],
+    ['Total Seats', vehicle?.seats ?? '-'],
     [
       'Assigned Seats',
-      v?.route_details?.[0]?.total_assigned_seat ??
-        (Array.isArray(v?.routes) && v.routes[0]?.total_assigned_seat) ??
-        '-',
+      vehicle?.assigned_seats !== undefined && vehicle?.assigned_seats !== null ? vehicle.assigned_seats : '-',
     ],
-    ['Onboarded Employee', '-'],
-    ['Speed', typeof v?.speed === 'number' ? `${v.speed} km/h` : '-'],
-    ['Driver Name', v?.driver_name ?? v?.driver ?? '-'],
-    ['Driver Number', v?.driver_number ?? v?.driver?.number ?? '-'],
+    ['Onboarded Employee', vehicle?.onboarded_employee ?? '-'],
+    ['Speed', vehicle?.speed ?? '-'],
+    ['Driver Name', vehicle?.driver_name ?? '-'],
+    ['Driver Number', vehicle?.driver_number ?? '-'],
   ];
 
   return (
@@ -75,16 +53,17 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
 
       <div
         className={`fixed transition-all top-0 
-          ${
-            isShowPanel ? 'right-0' : 'right-[-340px]'
-          } w-[340px] rounded-xl bg-white z-[99999] shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
+          ${isShowPanel ? 'right-0' : 'right-[-340px]'}
+          w-[340px] rounded-xl bg-white z-[99999] shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
         style={{
           transition: 'right 0.3s',
           minHeight: 0,
           maxHeight: 'calc(100vh - 5rem)',
         }}>
         <div className='flex flex-col items-center bg-gradient-to-r from-[#1d31a6] to-[#3b5998] py-4 px-4 border-b border-gray-200'>
-          <p className='font-bold text-lg text-white mb-1 truncate w-full text-center'>{v?.vehicle_name ?? '-'}</p>
+          <p className='font-bold text-lg text-white mb-1 truncate w-full text-center'>
+            {vehicle?.vehicle_name ?? '-'}
+          </p>
           <div className='flex justify-between items-center w-full gap-2 mt-1'>
             <span
               className='px-3 py-1 rounded-full text-xs font-semibold shadow'
@@ -110,7 +89,9 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
                 key={label}
                 className='flex justify-between items-center bg-white rounded-md px-3 py-2 shadow-sm border border-gray-100'>
                 <span className='text-gray-500 font-medium text-xs'>{label}</span>
-                <span className='text-gray-900 font-semibold text-xs'>{value || '-'}</span>
+                <span className='text-gray-900 font-semibold text-xs'>
+                  {value !== undefined && value !== null && value !== '' ? value : '-'}
+                </span>
               </div>
             ))}
           </div>
