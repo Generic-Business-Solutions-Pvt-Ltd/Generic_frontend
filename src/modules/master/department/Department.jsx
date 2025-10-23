@@ -1,21 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { APIURL } from '../../../constants';
 import { ApiService } from '../../../services';
-import {
-  fetchDepartments,
-  fetchDepartmentById,
-  clearSelectedDepartment,
-  deleteDepartment,
-} from '../../../redux/departmentSlice';
-import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { useEffect, useRef, useState } from 'react';
 import IModal from '../../../components/modal/Modal';
-import FilterOptions from '../../../components/FilterOption';
-import CommonSearch from '../../../components/CommonSearch';
-import CommanTable from '../../../components/table/CommonTable';
+import { useDispatch, useSelector } from 'react-redux';
 import DepartmentForm from './components/DepartmentForm';
+import CommonSearch from '../../../components/CommonSearch';
+import FilterOptions from '../../../components/FilterOption';
+import CommanTable from '../../../components/table/CommonTable';
+import { fetchDepartments, fetchDepartmentById } from '../../../redux/departmentSlice';
+import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { clearSelectedDepartment, deleteDepartment } from '../../../redux/departmentSlice';
 
 const columns = [
   { key: 'id', header: 'Sr No' },
@@ -118,10 +114,9 @@ function Department() {
     }
   };
 
-  // Export only the first 100 departments, properly formatted, using fetchDepartments
   const handleExport = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, 10);
       const res = await dispatch(fetchDepartments(exportPayload));
       const departments = res?.payload?.departments || [];
 
@@ -140,10 +135,9 @@ function Department() {
     }
   };
 
-  // Export only the first 100 departments to PDF, properly formatted, using fetchDepartments
   const handleExportPDF = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, 10);
       const res = await dispatch(fetchDepartments(exportPayload));
       const departments = res?.payload?.departments || [];
 

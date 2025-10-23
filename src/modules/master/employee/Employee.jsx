@@ -78,18 +78,18 @@ const columns = [
 function formatEmp(data, offset = 0) {
   return data.map((emp, idx) => ({
     id: offset + idx + 1,
-    actual_id: emp.id || emp.actual_id || '',
+    actual_id: emp.id || '',
     first_name: emp.first_name || '',
     last_name: emp.last_name || '',
-    employeeName: `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+    employeeName: [emp.first_name, emp.last_name].filter(Boolean).join(' '),
     employee_id: emp.employee_id || '',
     punch_id: emp.punch_id || '',
     email: emp.email || '',
     phone_number: emp.phone_number || '',
-    plant: emp.plant_name || (typeof emp.plant === 'string' ? emp.plant : ''),
-    department: emp.department_name || (typeof emp.department === 'string' ? emp.department : ''),
-    doj: emp.date_of_joining ? dayjs(emp.date_of_joining).format('YYYY-MM-DD') : '',
-    dob: emp.date_of_birth ? dayjs(emp.date_of_birth).format('YYYY-MM-DD') : '',
+    plant: emp.plant_name || '',
+    department: emp.department_name || '',
+    date_of_joining: emp.date_of_joining ? dayjs(emp.date_of_joining).format('YYYY-MM-DD') : '',
+    date_of_birth: emp.date_of_birth ? dayjs(emp.date_of_birth).format('YYYY-MM-DD') : '',
     created_at: emp.created_at ? dayjs(emp.created_at).format('YYYY-MM-DD HH:mm') : '',
     gender: emp.gender || '',
     vehicle_route_id: emp.vehicle_route_id || '',
@@ -121,7 +121,7 @@ function Employee() {
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
-    dispatch(fetchDepartments({ limit: 50 }));
+    dispatch(fetchDepartments({ limit: 10 }));
   }, [dispatch]);
 
   useEffect(() => {

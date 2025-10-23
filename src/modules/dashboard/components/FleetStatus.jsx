@@ -2,6 +2,7 @@ import { useSelector, shallowEqual } from 'react-redux';
 import movingVehicle from '../../../assets/moving_vehicle.svg';
 import idleVehicle from '../../../assets/idle_vehicle.svg';
 import parkedVehicle from '../../../assets/parked_vehicle.svg';
+import { useFetchVehicles } from '../../../hooks/useFetchVehicles';
 
 const VEHICLE_STATUS = [
   { img: movingVehicle, label: 'Running', key: 'runningDevices', color: '#00C48C' },
@@ -10,6 +11,8 @@ const VEHICLE_STATUS = [
 ];
 
 export default function FleetStatus() {
+  useFetchVehicles();
+
   const status = useSelector(
     (s) => ({
       runningDevices: s.multiTrackStatus.runningDevices || [],

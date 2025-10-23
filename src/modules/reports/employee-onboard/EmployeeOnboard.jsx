@@ -33,16 +33,8 @@ const columns = [
           : r.punch_status
         : '-',
   },
-  {
-    key: 'vehicle_name',
-    header: 'Vehicle Name',
-    render: (v, r) => r.vehicle_name || '-',
-  },
-  {
-    key: 'vehicle_number',
-    header: 'Vehicle Number',
-    render: (v, r) => r.vehicle_number || '-',
-  },
+  { key: 'vehicle_name', header: 'Vehicle Name', render: (v, r) => r.vehicle_name || '-' },
+  { key: 'vehicle_number', header: 'Vehicle Number', render: (v, r) => r.vehicle_number || '-' },
   {
     key: 'location',
     header: 'Location',
@@ -92,9 +84,9 @@ function EmployeeOnboard() {
 
   useEffect(() => {
     const company_id = localStorage.getItem('company_id');
-    dispatch(fetchDepartments({ limit: 100 }));
+    dispatch(fetchDepartments({ limit: 10 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
-    dispatch(fetchPlants({ limit: 100 }));
+    dispatch(fetchPlants({ limit: 50 }));
     if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
   }, [dispatch]);
 

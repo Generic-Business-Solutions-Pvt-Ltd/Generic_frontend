@@ -11,13 +11,13 @@ const colorOfDot = (ign, mov, time) => {
 };
 
 export const processVehicles = (vehicles) => {
-  const devices = vehicles.map((v) => {
+  const devices = (vehicles || []).filter(Boolean).map((v) => {
     const io = Array.isArray(v.ioElements) ? v.ioElements : [];
-    if (!io.length) return v;
-    const get = (id) => io.find((i) => i.id === id)?.value;
-    const ignition = get(239) === 1,
-      movement = get(240) === 1;
-    const localTime = !isNaN(new Date(v.timestamp)) ? new Date(v.timestamp).toISOString() : '';
+    const get = (id) => io.find((i) => i.id === id)?.value ?? 0;
+    const ignition = get(239) === 1;
+    const movement = get(240) === 1;
+    const localTime = v.timestamp && !isNaN(new Date(v.timestamp)) ? new Date(v.timestamp).toISOString() : '';
+
     const status = isOneHourOld(localTime)
       ? 'Offline'
       : ignition && movement
@@ -27,9 +27,10 @@ export const processVehicles = (vehicles) => {
       : !ignition && !movement
       ? 'Parked'
       : 'Unknown';
+
     return {
-      id: v.id,
-      vehicle_name: v.vehicle_name,
+      id: v.id ?? Math.random(),
+      vehicle_name: v.vehicle_name ?? 'Unknown',
       timestamp: localTime,
       speed_limit: v.speed || 0,
       speed: v.speed || 0,
@@ -45,6 +46,7 @@ export const processVehicles = (vehicles) => {
       status,
     };
   });
+
   return {
     devices,
     runningDevices: devices.filter((d) => d.status === 'Running'),

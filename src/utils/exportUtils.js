@@ -2,7 +2,6 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Convert an array of row objects and column definitions to a worksheet
 const buildWorksheetFromTable = (columns, rows) => {
   const safeColumns = (columns || []).map((c) => ({ header: c.header || c.key || '', key: c.key }));
   const headers = safeColumns.map((c) => c.header);

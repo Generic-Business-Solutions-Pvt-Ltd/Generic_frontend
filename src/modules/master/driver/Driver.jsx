@@ -47,22 +47,22 @@ function formatDriver(data, offset = 0) {
   return data.map((d, idx) => ({
     id: offset + idx + 1,
     actual_id: d.id,
-    driverName: `${d.first_name || ''} ${d.last_name || ''}`.trim() || '-',
-    driverEmail: d.email || '-',
-    phoneNumber: d.phone_number || '-',
+    driverName: [d.first_name, d.last_name].filter(Boolean).join(' ') || '-',
+    driverEmail: d.email?.trim() || '-',
+    phoneNumber: d.phone_number?.trim() || '-',
     dateOfBirth: d.date_of_birth ? dayjs(d.date_of_birth).format('YYYY-MM-DD') : '-',
-    address: d.address || '-',
-    punchId: d.punch_id || '-',
-    drivingLicenceNo: d.driving_licence || '-',
+    address: typeof d.address === 'string' && d.address.trim() ? d.address : '-',
+    punchId: d.punch_id?.toString().trim() || '-',
+    drivingLicenceNo: d.driving_licence?.toString().trim() || '-',
     drivingLicenceIssueDate: d.driving_licence_issue_date
       ? dayjs(d.driving_licence_issue_date).format('YYYY-MM-DD')
       : '-',
     drivingLicenceExpiryDate: d.driving_licence_expire_date
       ? dayjs(d.driving_licence_expire_date).format('YYYY-MM-DD')
       : '-',
-    latitude: d.latitude !== null && d.latitude !== undefined ? d.latitude : '-',
-    longitude: d.longitude !== null && d.longitude !== undefined ? d.longitude : '-',
-    createdAt: d.created_at ? dayjs(d.created_at).format('YYYY-MM-DD') : '-',
+    latitude: d.latitude !== null && d.latitude !== undefined && d.latitude !== '' ? d.latitude : '-',
+    longitude: d.longitude !== null && d.longitude !== undefined && d.longitude !== '' ? d.longitude : '-',
+    createdAt: d.created_at ? dayjs(d.created_at).format('YYYY-MM-DD HH:mm') : '-',
     status: d.active === 1 ? 'Active' : 'Inactive',
   }));
 }
