@@ -5,7 +5,7 @@ import ReportTable from '../../../components/table/ReportTable';
 import { fetchPlants } from '../../../redux/plantSlice';
 import { fetchDepartments } from '../../../redux/departmentSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchAllEmployeeDetails, fetchDestinationArrivalFemale } from '../../../redux/employeeSlice';
+import { fetchDestinationArrivalFemale, fetchEmployeeOnboard } from '../../../redux/employeeSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
@@ -43,7 +43,6 @@ function DestinationArrivalFemale() {
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
 
-  // Multiselect filter for employees, plants, departments like EmployeeOnboard
   const [filterData, setFilterData] = useState({
     routes: [],
     vehicles: [],
@@ -57,7 +56,7 @@ function DestinationArrivalFemale() {
   const [totalCount, setTotalCount] = useState(0);
 
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
+  const { employes: employees } = useSelector((s) => s.employee.onboardEmployees);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
   const { plants } = useSelector((s) => s.plant);
 
@@ -66,7 +65,7 @@ function DestinationArrivalFemale() {
     dispatch(fetchDepartments({ limit: 100 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 100 }));
-    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
+    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
   }, [dispatch]);
 
   const buildApiPayload = () => {

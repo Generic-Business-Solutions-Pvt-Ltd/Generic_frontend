@@ -33,6 +33,7 @@ const store = configureStore({
     feedbackReport: feedBackReportReducer,
     vehicleActivity: vehicleActivityReducer,
   },
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
 });
 
 export default store;
