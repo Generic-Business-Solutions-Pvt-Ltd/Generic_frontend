@@ -1,5 +1,4 @@
 import L from 'leaflet';
-import { useSelector } from 'react-redux';
 import { useRef, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ScaleControl, ZoomControl, Circle } from 'react-leaflet';
 
@@ -15,19 +14,30 @@ const icons = {
   blue: new L.Icon({ iconUrl: BluePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
 };
 
-const getIcon = (ign, mov, t) => (isOld(t) ? icons.blue : ign && mov ? icons.green : ign ? icons.orange : icons.red);
-
-const isOld = (date) => {
-  const d = new Date(date);
-  return !isNaN(d) && Date.now() - d.getTime() > 3600000;
+const statusClassColor = {
+  Moving: { label: 'Moving', cls: 'bg-green-100 text-green-700' },
+  Parked: { label: 'Parked', cls: 'bg-red-100 text-red-700' },
+  Idle: { label: 'Idle', cls: 'bg-orange-100 text-orange-700' },
+  Offline: { label: 'Offline', cls: 'bg-blue-100 text-blue-700' },
+  New: { label: 'New', cls: 'bg-gray-100 text-gray-700' },
+  Unknown: { label: 'Unknown', cls: 'bg-gray-100 text-gray-700' },
 };
+
+const getStatusClsObj = (status) => {
+  if (!status) return statusClassColor.Unknown;
+  const normalized = String(status).trim();
+  return statusClassColor[normalized] || statusClassColor.Unknown;
+};
+
+const getPinIcon = (status) =>
+  ({ Moving: icons.green, Idle: icons.orange, Parked: icons.red, Offline: icons.blue }[status] || icons.blue);
 
 function MapEffects({ selectedVehicle, markerRefs }) {
   const map = useMap();
   useEffect(() => {
     if (selectedVehicle && markerRefs.current[selectedVehicle.id]) {
       markerRefs.current[selectedVehicle.id].openPopup();
-      map.flyTo([selectedVehicle.lat, selectedVehicle.lng], 16, { duration: 1.2 });
+      map.flyTo([selectedVehicle.lat, selectedVehicle.lng], 16, { animate: true, duration: 1.2 });
     }
   }, [selectedVehicle, markerRefs, map]);
   return null;
@@ -35,40 +45,27 @@ function MapEffects({ selectedVehicle, markerRefs }) {
 
 const DEFAULT_CENTER = [20.5937, 78.9629];
 
-const statusMap = {
-  [icons.green]: { label: 'Moving', cls: 'bg-green-100 text-green-700' },
-  [icons.orange]: { label: 'Idle', cls: 'bg-orange-100 text-orange-700' },
-  [icons.red]: { label: 'Stopped', cls: 'bg-red-100 text-red-700' },
-  [icons.blue]: { label: 'Offline', cls: 'bg-blue-100 text-blue-700' },
-};
-
 const MapComponent = ({ selectedVehicle }) => {
-  const { vehicles } = useSelector((s) => s.vehicle);
   const markerRefs = useRef({});
 
-  const devices = useMemo(
-    () =>
-      (vehicles?.data || [])
-        .filter((v) => v.latitude && v.longitude)
-        .map((v) => {
-          const io = v.ioElements || [];
-          const ign = io.find((i) => i.id === 239)?.value;
-          const mov = io.find((i) => i.id === 240)?.value;
-          const icon = getIcon(ign, mov, v.timestamp);
-          return {
-            id: v.id,
-            name: v.vehicle_name,
-            lat: v.latitude,
-            lng: v.longitude,
-            icon,
-            timestamp: v.timestamp || '',
-            address: v.address || '',
-            speed: v.speed,
-            status: statusMap[icon] || statusMap[icons.blue],
-          };
-        }),
-    [vehicles?.data]
-  );
+  const devices = useMemo(() => {
+    if (!selectedVehicle) return [];
+    const statusObj = getStatusClsObj(selectedVehicle.status);
+    const icon = getPinIcon(selectedVehicle.status);
+    return [
+      {
+        id: selectedVehicle.id,
+        name: selectedVehicle.vehicle_name ?? selectedVehicle.name ?? '-',
+        lat: selectedVehicle.lat,
+        lng: selectedVehicle.lng,
+        icon,
+        timestamp: selectedVehicle.timestamp || '',
+        address: selectedVehicle.address || '',
+        speed: selectedVehicle.speed,
+        status: statusObj,
+      },
+    ];
+  }, [selectedVehicle]);
 
   const mapCenter = useMemo(
     () =>
