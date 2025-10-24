@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { fetchPlants } from '../../../redux/plantSlice';
 import FilterOption from '../../../components/FilterOption';
 import ReportTable from '../../../components/table/ReportTable';
-import { fetchPlants } from '../../../redux/plantSlice';
 import { fetchDepartments } from '../../../redux/departmentSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchDestinationArrivalFemale, fetchEmployeeOnboard } from '../../../redux/employeeSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
+import { fetchDestinationArrivalFemale, fetchAllEmployeeDetails } from '../../../redux/employeeSlice';
 
 const columns = [
   { key: 'dateTime', header: 'Date' },
@@ -56,7 +56,7 @@ function DestinationArrivalFemale() {
   const [totalCount, setTotalCount] = useState(0);
 
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.onboardEmployees);
+  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
   const { plants } = useSelector((s) => s.plant);
 
@@ -65,7 +65,7 @@ function DestinationArrivalFemale() {
     dispatch(fetchDepartments({ limit: 10 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 50 }));
-    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
+    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
   }, [dispatch]);
 
   const buildApiPayload = () => {

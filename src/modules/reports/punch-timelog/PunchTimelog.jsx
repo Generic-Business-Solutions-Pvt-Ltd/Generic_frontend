@@ -7,40 +7,36 @@ import ReportTable from '../../../components/table/ReportTable';
 import { fetchDepartments } from '../../../redux/departmentSlice';
 import { fetchPuchLogReport } from '../../../redux/punchInOutSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchEmployeeOnboard } from '../../../redux/employeeSlice';
+import { fetchAllEmployeeDetails } from '../../../redux/employeeSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
+  { key: 'punch_time', header: 'Date & Time', render: (v) => (v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-') },
+  { key: 'punch_status', header: 'Punch Status', render: (v) => (v === true ? 'IN' : v === false ? 'OUT' : '-') },
   {
     key: 'employee_name',
     header: 'Employee Name',
     render: (_v, r) => [r.first_name, r.last_name].filter(Boolean).join(' ') || '-',
   },
-  { key: 'punch_id', header: 'RFID Tag', render: (v, r) => r.punch_id || '-' },
-  { key: 'punch_time', header: 'Punch Time', render: (v) => (v ? moment(v).format('YYYY-MM-DD hh:mm:ss A') : '-') },
-  { key: 'punch_status', header: 'Punch Status', render: (v) => (v === true ? 'In' : v === false ? 'Out' : '-') },
-  { key: 'vehicle_name', header: 'Vehicle Name', render: (v, r) => r.vehicle_name || '-' },
-  { key: 'vehicle_number', header: 'Vehicle Number', render: (v, r) => r.vehicle_number || '-' },
-  {
-    key: 'location',
-    header: 'Location',
-    render: (_v, r) =>
-      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(7)}, ${Number(r.longitude).toFixed(7)}` : '-',
-  },
+  { key: 'employee_id', header: 'Employee ID', render: (_v, r) => r.emp_code || '-' },
+  { key: 'punch_id', header: 'RFID Tag', render: (_v, r) => r.punch_id || '-' },
+  { key: 'department_name', header: 'Department', render: (_v, r) => r.department_name || '-' },
+  { key: 'plant_name', header: 'Plant', render: (_v, r) => r.plant_name || '-' },
+  { key: 'vehicle_route_id', header: 'Vehicle Route ID', render: (_v, r) => r.vehicle_route_id || '-' },
   {
     key: 'gmap',
-    header: 'Google-map',
+    header: 'G-Map',
     render: (_v, r) =>
       r.latitude && r.longitude ? (
         <a
-          href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`}
+          href={`https://maps.google.com/?q=${parseFloat(r.latitude)},${parseFloat(r.longitude)}`}
           target='_blank'
           className='text-blue-700'
           rel='noopener noreferrer'>
-          Google Map
+          G-Map
         </a>
       ) : (
-        ''
+        '-'
       ),
   },
 ];
@@ -61,7 +57,7 @@ function PunchTimelog() {
 
   const { punchLogs, loading, error, totalCount } = useSelector((s) => s.punchInOut);
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.onboardEmployees);
+  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
   const { plants } = useSelector((s) => s.plant);
 
@@ -70,7 +66,7 @@ function PunchTimelog() {
     dispatch(fetchDepartments({ limit: 10 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 50 }));
-    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
+    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
   }, [dispatch]);
 
   const buildApiPayload = useCallback(() => {

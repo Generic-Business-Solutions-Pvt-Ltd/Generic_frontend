@@ -207,7 +207,7 @@ function FilterOption({
               <>
                 <TextField
                   label='From Date'
-                  type='datetime-local'
+                  type='date'
                   InputLabelProps={{ shrink: true }}
                   fullWidth
                   size='small'
@@ -217,7 +217,7 @@ function FilterOption({
                 />
                 <TextField
                   label='To Date'
-                  type='datetime-local'
+                  type='date'
                   InputLabelProps={{ shrink: true }}
                   fullWidth
                   size='small'

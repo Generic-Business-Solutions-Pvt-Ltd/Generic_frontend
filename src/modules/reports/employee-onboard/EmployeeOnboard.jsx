@@ -6,56 +6,57 @@ import ReportTable from '../../../components/table/ReportTable';
 import { fetchPlants } from '../../../redux/plantSlice';
 import { fetchDepartments } from '../../../redux/departmentSlice';
 import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
-import { fetchEmployeeOnboard } from '../../../redux/employeeSlice';
+import { fetchEmployeeOnboard, fetchAllEmployeeDetails } from '../../../redux/employeeSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
+  { key: 'date', header: 'Date', render: (_v, r) => (r.date ? moment(r.date).format('YYYY-MM-DD') : '-') },
   {
-    key: 'onboard_employee',
-    header: 'Employee Name',
-    render: (_v, r) => [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || '-',
-  },
-  { key: 'punch_id', header: 'RFID Tag', render: (v, r) => r.punch_id || '-' },
-  {
-    key: 'punch_time',
-    header: 'Punch Time',
-    render: (_v, r) => (r.punch_time ? moment(r.punch_time).format('hh:mm:ss A, DD-MM-YYYY') : '-'),
+    key: 'boarding_in',
+    header: 'Boarding In',
+    render: (_v, r) => (r.boarding_in ? moment(r.boarding_in).format('HH:mm:ss') : '-'),
   },
   {
-    key: 'punch_status',
-    header: 'Punch Status',
-    render: (_v, r) =>
-      typeof r.punch_status !== 'undefined'
-        ? r.punch_status === true
-          ? 'In'
-          : r.punch_status === false
-          ? 'Out'
-          : r.punch_status
-        : '-',
+    key: 'boarding_out',
+    header: 'Boarding Out',
+    render: (_v, r) => (r.boarding_out ? moment(r.boarding_out).format('HH:mm:ss') : '-'),
   },
-  { key: 'vehicle_name', header: 'Vehicle Name', render: (v, r) => r.vehicle_name || '-' },
-  { key: 'vehicle_number', header: 'Vehicle Number', render: (v, r) => r.vehicle_number || '-' },
+  { key: 'employee_name', header: 'Employee Name', render: (_v, r) => (r.employee_name ? r.employee_name : '-') },
+  { key: 'employee_id', header: 'Employee ID', render: (_v, r) => (r.employee_id ? r.employee_id : '-') },
+  { key: 'department', header: 'Department', render: (_v, r) => (r.department ? r.department : '-') },
   {
-    key: 'location',
-    header: 'Location',
-    render: (_v, r) =>
-      r.latitude && r.longitude ? `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}` : '-',
+    key: 'vehicle_route_id',
+    header: 'Vehicle Route ID',
+    render: (_v, r) => (r.vehicle_route_id ? r.vehicle_route_id : '-'),
   },
+  { key: 'source', header: 'Source', render: (_v, r) => (r.vehicle_source ? r.vehicle_source : '-') },
+  { key: 'destination', header: 'Destination', render: (_v, r) => (r.destination ? r.destination : '-') },
   {
     key: 'gmap',
-    header: 'Google-map',
+    header: 'G-Map',
     render: (_v, r) =>
       r.latitude && r.longitude ? (
         <a
-          href={`https://maps.google.com/?q=${r.latitude},${r.longitude}`}
+          href={`https://maps.google.com/?q=${parseFloat(r.latitude)},${parseFloat(r.longitude)}`}
           target='_blank'
           className='text-blue-700'
           rel='noopener noreferrer'>
-          Google Map
+          G-Map
         </a>
       ) : (
-        ''
+        '-'
       ),
+  },
+  {
+    key: 'location',
+    header: 'Nearest Location',
+    render: (_v, r) => (r.vehicle_route_name ? r.vehicle_route_name : '-'),
+  },
+  { key: 'driver_name', header: 'Driver Name', render: (_v, r) => (r.driver_name ? r.driver_name : '-') },
+  {
+    key: 'driver_contact',
+    header: 'Driver Contact Number',
+    render: (_v, r) => (r.driver_contact ? r.driver_contact : '-'),
   },
 ];
 
@@ -76,7 +77,7 @@ function EmployeeOnboard() {
   const [totalCount, setTotalCount] = useState(0);
 
   const { departments } = useSelector((s) => s.department);
-  const { employes: employees } = useSelector((s) => s.employee.onboardEmployees);
+  const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
   const error = useSelector((s) => s.employee.error);
   const loading = useSelector((s) => s.employee.loading);
   const { plants } = useSelector((s) => s.plant);
@@ -87,7 +88,7 @@ function EmployeeOnboard() {
     dispatch(fetchDepartments({ limit: 10 }));
     dispatch(fetchVehicleRoutes({ limit: 100 }));
     dispatch(fetchPlants({ limit: 50 }));
-    if (company_id) dispatch(fetchEmployeeOnboard({ company_id, limit: 3000 }));
+    if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
   }, [dispatch]);
 
   const buildApiPayload = () => {
@@ -108,8 +109,8 @@ function EmployeeOnboard() {
 
   useEffect(() => {
     dispatch(fetchEmployeeOnboard({ ...buildApiPayload(), page: page + 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+      setFilteredData([].concat(res?.payload?.records || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.records?.length || 0);
     });
     // eslint-disable-next-line
   }, [page, limit]);
@@ -118,8 +119,8 @@ function EmployeeOnboard() {
     e.preventDefault();
     setPage(0);
     dispatch(fetchEmployeeOnboard({ ...buildApiPayload(), page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+      setFilteredData([].concat(res?.payload?.records || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.records?.length || 0);
     });
   };
 
@@ -137,8 +138,8 @@ function EmployeeOnboard() {
     setPage(0);
     const company_id = localStorage.getItem('company_id');
     dispatch(fetchEmployeeOnboard({ company_id, page: 1, limit })).then((res) => {
-      setFilteredData([].concat(res?.payload?.employes || []));
-      setTotalCount(res?.payload?.pagination?.total || res?.payload?.employes?.length || 0);
+      setFilteredData([].concat(res?.payload?.records || []));
+      setTotalCount(res?.payload?.pagination?.total || res?.payload?.records?.length || 0);
     });
   };
 
