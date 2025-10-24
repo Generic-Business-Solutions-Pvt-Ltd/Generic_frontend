@@ -116,7 +116,7 @@ function Department() {
 
   const handleExport = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 10);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchDepartments(exportPayload));
       const departments = res?.payload?.departments || [];
 
@@ -137,7 +137,7 @@ function Department() {
 
   const handleExportPDF = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 10);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchDepartments(exportPayload));
       const departments = res?.payload?.departments || [];
 

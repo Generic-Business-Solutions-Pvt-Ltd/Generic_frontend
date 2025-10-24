@@ -113,10 +113,9 @@ function Plant() {
     }
   };
 
-  // Export only the first 100 plants, properly formatted, using fetchPlants
   const handleExport = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchPlants(exportPayload));
       const plants = res?.payload?.plants || [];
 
@@ -135,10 +134,9 @@ function Plant() {
     }
   };
 
-  // Export only the first 100 plants to PDF, properly formatted, using fetchPlants
   const handleExportPDF = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchPlants(exportPayload));
       const plants = res?.payload?.plants || [];
 

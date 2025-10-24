@@ -24,11 +24,7 @@ const columns = [
   { key: 'employee_name', header: 'Employee Name', render: (_v, r) => (r.employee_name ? r.employee_name : '-') },
   { key: 'employee_id', header: 'Employee ID', render: (_v, r) => (r.employee_id ? r.employee_id : '-') },
   { key: 'department', header: 'Department', render: (_v, r) => (r.department ? r.department : '-') },
-  {
-    key: 'vehicle_route_id',
-    header: 'Vehicle Route ID',
-    render: (_v, r) => (r.vehicle_route_id ? r.vehicle_route_id : '-'),
-  },
+  { key: 'vehicle_route_name', header: 'Vehicle Route ID', render: (_v, r) => r.vehicle_route_name || '-' },
   { key: 'source', header: 'Source', render: (_v, r) => (r.vehicle_source ? r.vehicle_source : '-') },
   { key: 'destination', header: 'Destination', render: (_v, r) => (r.destination ? r.destination : '-') },
   {
@@ -48,9 +44,9 @@ const columns = [
       ),
   },
   {
-    key: 'location',
+    key: 'nearest_location',
     header: 'Nearest Location',
-    render: (_v, r) => (r.vehicle_route_name ? r.vehicle_route_name : '-'),
+    render: (_v, r) => (r.nearest_location ? r.nearest_location : '-'),
   },
   { key: 'driver_name', header: 'Driver Name', render: (_v, r) => (r.driver_name ? r.driver_name : '-') },
   {
@@ -78,8 +74,7 @@ function EmployeeOnboard() {
 
   const { departments } = useSelector((s) => s.department);
   const { employes: employees } = useSelector((s) => s.employee.getAllEmployeeDetails);
-  const error = useSelector((s) => s.employee.error);
-  const loading = useSelector((s) => s.employee.loading);
+  const { error, loading } = useSelector((s) => s.employee);
   const { plants } = useSelector((s) => s.plant);
   const { routes } = useSelector((s) => s.vehicleRoute.vehicleRoutes);
 
@@ -91,7 +86,7 @@ function EmployeeOnboard() {
     if (company_id) dispatch(fetchAllEmployeeDetails({ company_id, limit: 3000 }));
   }, [dispatch]);
 
-  const buildApiPayload = () => {
+  const buildApiPayload = (fetchLimit) => {
     const { fromDate, toDate, departments, employees, routes, vehicles, plants } = filterData;
     const company_id = localStorage.getItem('company_id');
     const payload = { company_id };
@@ -104,6 +99,7 @@ function EmployeeOnboard() {
 
     if (fromDate) payload.from_date = fromDate;
     if (toDate) payload.to_date = toDate;
+    if (fetchLimit) payload.limit = fetchLimit;
     return payload;
   };
 
@@ -143,20 +139,26 @@ function EmployeeOnboard() {
     });
   };
 
-  const handleExport = () =>
+  const handleExport = async () => {
+    const res = await dispatch(fetchEmployeeOnboard({ ...buildApiPayload(totalCount), page: 1 }));
+    const allRecords = [].concat(res?.payload?.records || []);
     exportToExcel({
       columns,
-      rows: buildExportRows({ columns, data: filteredData }),
+      rows: buildExportRows({ columns, data: allRecords }),
       fileName: 'employee_onboard_report.xlsx',
     });
+  };
 
-  const handleExportPDF = () =>
+  const handleExportPDF = async () => {
+    const res = await dispatch(fetchEmployeeOnboard({ ...buildApiPayload(totalCount), page: 1 }));
+    const allRecords = [].concat(res?.payload?.records || []);
     exportToPDF({
       columns,
-      rows: buildExportRows({ columns, data: filteredData }),
+      rows: buildExportRows({ columns, data: allRecords }),
       fileName: 'employee_onboard_report.pdf',
       orientation: 'landscape',
     });
+  };
 
   return (
     <div className='w-full h-full p-2'>

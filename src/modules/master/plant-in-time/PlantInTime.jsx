@@ -162,10 +162,9 @@ function PlantInTime() {
     }
   };
 
-  // Export only the first 100 plant in time records to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await ApiService.get(APIURL.PLANTINTIME, exportPayload);
       const data = res?.data || [];
 

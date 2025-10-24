@@ -173,7 +173,7 @@ function Driver() {
 
   const handleExport = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchDrivers(exportPayload));
       const drivers = res?.payload?.drivers || res?.payload?.data || [];
       exportToExcel({
@@ -188,7 +188,7 @@ function Driver() {
 
   const handleExportPDF = async () => {
     try {
-      const exportPayload = buildApiPayload(1, 100);
+      const exportPayload = buildApiPayload(1, totalCount);
       const res = await dispatch(fetchDrivers(exportPayload));
       const drivers = res?.payload?.drivers || res?.payload?.data || [];
       exportToPDF({

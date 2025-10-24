@@ -207,7 +207,7 @@ function Employee() {
   };
 
   const handleExport = async () => {
-    const res = await dispatch(fetchEmployees(buildApiPayload(2000)));
+    const res = await dispatch(fetchEmployees(buildApiPayload(totalCount)));
     const allEmployees = res?.payload?.employes || [];
     exportToExcel({
       columns,
@@ -217,7 +217,7 @@ function Employee() {
   };
 
   const handleExportPDF = async () => {
-    const res = await dispatch(fetchEmployees(buildApiPayload(2000)));
+    const res = await dispatch(fetchEmployees(buildApiPayload(totalCount)));
     const allEmployees = res?.payload?.employes || [];
     exportToPDF({
       columns,
