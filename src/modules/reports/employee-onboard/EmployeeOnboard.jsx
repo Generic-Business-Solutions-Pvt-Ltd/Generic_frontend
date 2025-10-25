@@ -52,7 +52,7 @@ const columns = [
   {
     key: 'driver_contact',
     header: 'Driver Contact Number',
-    render: (_v, r) => (r.driver_contact ? r.driver_contact : '-'),
+    render: (_v, r) => (r.driver_contact_number ? r.driver_contact_number : '-'),
   },
 ];
 
