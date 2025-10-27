@@ -1,6 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './authSlice';
-import vehicleReducer from './vehicleSlice';
 import vehiclesReducer from './vehiclesSlice';
 import departmentReducer from './departmentSlice';
 import plantReducer from './plantSlice';
@@ -18,7 +17,6 @@ import vehicleActivityReducer from './vehicleActivitySlice';
 const store = configureStore({
   reducer: {
     auth: authReducer,
-    vehicle: vehicleReducer,
     vehicles: vehiclesReducer,
     department: departmentReducer,
     plant: plantReducer,

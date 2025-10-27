@@ -5,7 +5,7 @@ import { APIURL } from '../../../../constants';
 import { ApiService } from '../../../../services';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchVehicles } from '../../../../redux/vehicleSlice';
+import { fetchVehicles } from '../../../../redux/vehiclesSlice';
 import { Button, TextField, Autocomplete } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 

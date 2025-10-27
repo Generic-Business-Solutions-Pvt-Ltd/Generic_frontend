@@ -2,7 +2,7 @@ import { APIURL } from '../constants';
 import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { Lastvehicledata } from '../services';
-import { fetchVehicles } from '../redux/vehicleSlice';
+import { fetchVehicles } from '../redux/vehiclesSlice';
 import { setProcessedVehicles } from '../redux/multiTrackSlice';
 
 const shallowEqual = (a, b) =>
@@ -26,23 +26,34 @@ export const useFetchVehicles = () => {
 
       try {
         const res = await dispatch(fetchVehicles({ limit: 100 }));
-        const vehicles = res?.payload?.data?.vehicles || [];
-        const validVehicles = vehicles?.filter((v) => v?.imei_number);
-        const imeis = validVehicles?.map((v) => v.imei_number);
-        if (!imeis.length) return;
+        const vehicles = res?.payload?.vehicles || [];
+        const validVehicles = vehicles.filter((v) => v?.imei_number);
 
-        const imeiToName = validVehicles.reduce((acc, v) => ((acc[v.imei_number] = v.vehicle_name), acc), {});
+        if (!validVehicles.length) return;
+
+        const imeis = validVehicles.map((v) => v.imei_number);
         let lastData = [];
 
         for (let i = 0; i < imeis.length; i += 10) {
           const chunk = imeis.slice(i, i + 10);
           const results = await Promise.all(
-            chunk.map((imei) => Lastvehicledata.get(`${APIURL.LASTVEHICLEDATA}?imei=${imei}`).catch(() => null))
+            chunk.map(async (imei) => {
+              try {
+                const r = await Lastvehicledata.get(`${APIURL.LASTVEHICLEDATA}?imei=${imei}`);
+                return r;
+              } catch (err) {
+                console.error('Error fetching last data for IMEI', imei, err);
+                return null;
+              }
+            })
           );
           lastData.push(...results.flatMap((r) => (r?.success ? r.data : [])));
         }
 
-        const enriched = lastData.map((item) => ({ ...item, vehicle_name: imeiToName[item?.imei] || null }));
+        const enriched = validVehicles.map((v) => {
+          const live = lastData.find((d) => d?.imei === v.imei_number);
+          return { ...v, ...(live || {}), vehicle_name: v.vehicle_name };
+        });
 
         if (mounted && !shallowEqual(lastDataRef.current, enriched)) {
           lastDataRef.current = enriched;

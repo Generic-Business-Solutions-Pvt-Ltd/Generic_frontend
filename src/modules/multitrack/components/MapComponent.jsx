@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import { useRef, useMemo, useEffect } from 'react';
+import { useSelector, shallowEqual } from 'react-redux';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ScaleControl, ZoomControl, Circle } from 'react-leaflet';
 
 import GreenPin from '../../../assets/greenLocationPin.svg';
@@ -8,29 +9,32 @@ import OrangePin from '../../../assets/orangeLocationPin.svg';
 import BluePin from '../../../assets/blueLocationPin.svg';
 
 const icons = {
-  green: new L.Icon({ iconUrl: GreenPin, iconSize: [32, 32], iconAnchor: [16, 32] }),
-  red: new L.Icon({ iconUrl: RedPin, iconSize: [32, 32], iconAnchor: [16, 32] }),
-  orange: new L.Icon({ iconUrl: OrangePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
-  blue: new L.Icon({ iconUrl: BluePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
+  Moving: new L.Icon({ iconUrl: GreenPin, iconSize: [32, 32], iconAnchor: [16, 32] }),
+  Parked: new L.Icon({ iconUrl: RedPin, iconSize: [32, 32], iconAnchor: [16, 32] }),
+  Idle: new L.Icon({ iconUrl: OrangePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
+  Offline: new L.Icon({ iconUrl: BluePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
+  default: new L.Icon({ iconUrl: BluePin, iconSize: [32, 32], iconAnchor: [16, 32] }),
 };
 
 const statusClassColor = {
-  Moving: { label: 'Moving', cls: 'bg-green-100 text-green-700' },
-  Parked: { label: 'Parked', cls: 'bg-red-100 text-red-700' },
-  Idle: { label: 'Idle', cls: 'bg-orange-100 text-orange-700' },
-  Offline: { label: 'Offline', cls: 'bg-blue-100 text-blue-700' },
-  New: { label: 'New', cls: 'bg-gray-100 text-gray-700' },
-  Unknown: { label: 'Unknown', cls: 'bg-gray-100 text-gray-700' },
+  Moving: 'bg-green-100 text-green-700',
+  Parked: 'bg-red-100 text-red-700',
+  Idle: 'bg-orange-100 text-orange-700',
+  Offline: 'bg-blue-100 text-blue-700',
+  New: 'bg-gray-100 text-gray-700',
+  Unknown: 'bg-gray-100 text-gray-700',
 };
 
-const getStatusClsObj = (status) => {
-  if (!status) return statusClassColor.Unknown;
-  const normalized = String(status).trim();
-  return statusClassColor[normalized] || statusClassColor.Unknown;
-};
+const getStatusCls = (status) => statusClassColor[status?.trim?.()] || statusClassColor.Unknown;
+const getPinIcon = (status) => icons[status?.trim?.()] || icons.default;
 
-const getPinIcon = (status) =>
-  ({ Moving: icons.green, Idle: icons.orange, Parked: icons.red, Offline: icons.blue }[status] || icons.blue);
+const selectAllDisplayDevices = (s) => [
+  ...(s.multiTrackStatus.runningDevices || []),
+  ...(s.multiTrackStatus.idelDevices || []),
+  ...(s.multiTrackStatus.parkedDevices || []),
+  ...(s.multiTrackStatus.offlineVehicleData || []),
+  ...(s.multiTrackStatus.newDevices || []),
+];
 
 function MapEffects({ selectedVehicle, markerRefs }) {
   const map = useMap();
@@ -47,35 +51,50 @@ const DEFAULT_CENTER = [20.5937, 78.9629];
 
 const MapComponent = ({ selectedVehicle }) => {
   const markerRefs = useRef({});
+  const allDevices = useSelector(selectAllDisplayDevices, shallowEqual);
 
   const devices = useMemo(() => {
-    if (!selectedVehicle) return [];
-    const statusObj = getStatusClsObj(selectedVehicle.status);
-    const icon = getPinIcon(selectedVehicle.status);
-    return [
-      {
-        id: selectedVehicle.id,
-        name: selectedVehicle.vehicle_name ?? selectedVehicle.name ?? '-',
-        lat: selectedVehicle.lat,
-        lng: selectedVehicle.lng,
-        icon,
-        timestamp: selectedVehicle.timestamp || '',
-        address: selectedVehicle.address || '',
-        speed: selectedVehicle.speed,
-        status: statusObj,
-      },
-    ];
-  }, [selectedVehicle]);
+    if (selectedVehicle) {
+      return [
+        {
+          id: selectedVehicle.id,
+          name: selectedVehicle.vehicle_name ?? selectedVehicle.name ?? '-',
+          lat: selectedVehicle.lat,
+          lng: selectedVehicle.lng,
+          icon: getPinIcon(selectedVehicle.status),
+          timestamp: selectedVehicle.timestamp || '',
+          address: selectedVehicle.address || '',
+          speed: selectedVehicle.speed,
+          cls: getStatusCls(selectedVehicle.status),
+          label: selectedVehicle.status ?? 'Unknown',
+        },
+      ];
+    }
+    return (allDevices || [])
+      .filter((d) => d && typeof d.lat === 'number' && typeof d.lng === 'number')
+      .map((d) => ({
+        id: d.id,
+        name: d.vehicle_name ?? d.name ?? '-',
+        lat: d.lat,
+        lng: d.lng,
+        icon: getPinIcon(d.status),
+        timestamp: d.timestamp || '',
+        address: d.address || '',
+        speed: d.speed,
+        cls: getStatusCls(d.status),
+        label: d.status ?? 'Unknown',
+      }));
+  }, [selectedVehicle, allDevices]);
 
-  const mapCenter = useMemo(
-    () =>
-      selectedVehicle?.lat && selectedVehicle?.lng
-        ? [selectedVehicle.lat, selectedVehicle.lng]
-        : devices[0]
-        ? [devices[0].lat, devices[0].lng]
-        : DEFAULT_CENTER,
-    [selectedVehicle, devices]
-  );
+  const mapCenter = useMemo(() => {
+    if (selectedVehicle?.lat && selectedVehicle?.lng) return [selectedVehicle.lat, selectedVehicle.lng];
+    if (devices.length === 1) return [devices[0].lat, devices[0].lng];
+    if (devices.length > 1) {
+      const avg = devices.reduce((acc, d) => [acc[0] + d.lat, acc[1] + d.lng], [0, 0]);
+      return [avg[0] / devices.length, avg[1] / devices.length];
+    }
+    return DEFAULT_CENTER;
+  }, [selectedVehicle, devices]);
 
   return (
     <div className='h-screen w-full relative'>
@@ -94,9 +113,9 @@ const MapComponent = ({ selectedVehicle }) => {
           url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        {devices.map((d) => (
+        {devices.map((d, idx) => (
           <Marker
-            key={d.id}
+            key={`${d.id ?? 'noid'}_${idx}`}
             position={[d.lat, d.lng]}
             icon={d.icon}
             ref={(ref) => ref && (markerRefs.current[d.id] = ref)}>
@@ -114,7 +133,7 @@ const MapComponent = ({ selectedVehicle }) => {
                   <span className='font-semibold'>Address:</span> {d.address}
                 </div>
                 <div className='mt-2'>
-                  <span className={`inline-block px-2 py-1 rounded text-xs ${d.status.cls}`}>{d.status.label}</span>
+                  <span className={`inline-block px-2 py-1 rounded text-xs ${d.cls}`}>{d.label}</span>
                 </div>
               </div>
             </Popup>

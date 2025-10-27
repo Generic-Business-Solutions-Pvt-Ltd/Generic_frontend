@@ -34,11 +34,6 @@ const selectState = (s) => ({
   isTrackShow: s.multiTrackStatus.isTrackShow,
 });
 
-const dedupe = (arr) => {
-  const seen = new Set();
-  return (arr || []).filter((item) => item?.id && !seen.has(item.id) && seen.add(item.id));
-};
-
 const StatCard = ({ icon, label, value, bg, color }) => (
   <div className='flex flex-row w-1/3 items-center gap-2 shadow-sm' style={{ background: bg }}>
     <div className='pl-2'>{icon}</div>
@@ -63,11 +58,11 @@ const TrackingPanel = ({ handleRightPanel }) => {
 
   const cleaned = useMemo(
     () => ({
-      Running: dedupe(running),
-      Idle: dedupe(idle),
-      Parked: dedupe(parked),
-      Offline: dedupe(offline),
-      New: dedupe(newDevices),
+      Running: running || [],
+      Idle: idle || [],
+      Parked: parked || [],
+      Offline: offline || [],
+      New: newDevices || [],
       All: devices || [],
     }),
     [devices, newDevices, running, parked, idle, offline]
@@ -81,8 +76,7 @@ const TrackingPanel = ({ handleRightPanel }) => {
   const filtered = useMemo(() => cleaned[activeTab] || [], [cleaned, activeTab]);
 
   const shownDevices = useMemo(
-    () =>
-      dedupe(!search ? filtered : filtered.filter((d) => d.vehicle_name?.toLowerCase().includes(search.toLowerCase()))),
+    () => (!search ? filtered : filtered.filter((d) => d.vehicle_name?.toLowerCase().includes(search.toLowerCase()))),
     [search, filtered]
   );
 

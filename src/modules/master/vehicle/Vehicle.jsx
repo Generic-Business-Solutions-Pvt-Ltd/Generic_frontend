@@ -22,28 +22,12 @@ const columns = [
   { key: 'imeiNumber', header: 'IMEI Number', render: (_, row) => row.imeiNumber || '-' },
   { key: 'speedLimit', header: 'Speed Limit', render: (_, row) => row.speedLimit ?? '-' },
   { key: 'seatCount', header: 'Seat Count', render: (_, row) => row.seatCount ?? '-' },
-  {
-    key: 'createdAt',
-    header: 'Created At',
-    render: (_, row) => (row.createdAt ? row.createdAt : '-'),
-  },
-  {
-    key: 'driverName',
-    header: 'Driver Name',
-    render: (_, row) => row.driverName || '-',
-  },
+  { key: 'createdAt', header: 'Created At', render: (_, row) => (row.createdAt ? row.createdAt : '-') },
+  { key: 'driverName', header: 'Driver Name', render: (_, row) => row.driverName || '-' },
   { key: 'driverEmail', header: 'Driver Email', render: (_, row) => row.driverEmail || '-' },
   { key: 'driverPhoneNumber', header: 'Driver Phone', render: (_, row) => row.driverPhoneNumber || '-' },
-  {
-    key: 'routeNumber',
-    header: 'Route Number',
-    render: (_, row) => row.routeNumber || '-',
-  },
-  {
-    key: 'routeName',
-    header: 'Route Name',
-    render: (_, row) => row.routeName || '-',
-  },
+  { key: 'routeNumber', header: 'Route Number', render: (_, row) => row.routeNumber || '-' },
+  { key: 'routeName', header: 'Route Name', render: (_, row) => row.routeName || '-' },
   {
     key: 'status',
     header: 'Status',

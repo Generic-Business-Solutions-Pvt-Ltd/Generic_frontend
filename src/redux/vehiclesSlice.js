@@ -62,7 +62,7 @@ export const changeVehicleStatus = createAsyncThunk(
         vehicle_status_id: newStatusId,
       });
       if (res.data) {
-        return res.vehicle; // return updated vehicle object directly
+        return res.vehicle;
       } else {
         return rejectWithValue(res.message || 'Failed to update status');
       }
@@ -89,6 +89,16 @@ const vehiclesSlice = createSlice({
       state.vehicles = action.payload;
     },
     resetVehicleState: () => initialState,
+    updatedData: (state, action) => {
+      const payload = typeof action.payload === 'string' ? JSON.parse(action.payload) : action.payload;
+      const updatedIMEI = payload.imei || payload.imei_number;
+      if (!updatedIMEI) return;
+      state.vehicles = Array.isArray(state.vehicles)
+        ? state.vehicles.map((v) =>
+            v.imei_number === updatedIMEI ? { ...v, ...payload, imei_number: v.imei_number } : v
+          )
+        : state.vehicles;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -153,5 +163,5 @@ const vehiclesSlice = createSlice({
   },
 });
 
-export const { setVehicleData, resetVehicleState } = vehiclesSlice.actions;
+export const { setVehicleData, resetVehicleState, updatedData } = vehiclesSlice.actions;
 export default vehiclesSlice.reducer;

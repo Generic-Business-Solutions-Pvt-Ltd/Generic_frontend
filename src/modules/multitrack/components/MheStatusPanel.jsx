@@ -12,29 +12,45 @@ const statusColorMap = {
   Unknown: '#000000',
 };
 
+const renderValue = (val) => {
+  if (val == null || val === '') return '-';
+  if (Array.isArray(val)) return val.length ? val.join(', ') : '-';
+  if (typeof val === 'object') {
+    if ('first_name' in val && 'last_name' in val) return `${val.first_name} ${val.last_name}`;
+    if ('name' in val) return val.name;
+    try {
+      const str = JSON.stringify(val);
+      return str.length > 60 ? str.slice(0, 57) + '...' : str;
+    } catch {
+      return '-';
+    }
+  }
+  return val;
+};
+
+const Btn = ({ children }) => (
+  <button className='bg-gradient-to-r from-[#1d31a6] to-[#3b5998] px-3 py-2 text-white rounded-lg text-xs font-semibold shadow hover:from-[#3b5998] hover:to-[#1d31a6] transition-all duration-150 cursor-pointer'>
+    {children}
+  </button>
+);
+
 const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
-
   useEffect(() => {
     setCurrentDateTime(moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm'));
   }, []);
-
   const status = vehicle?.status ?? 'Unknown';
-
-  const details = [
-    ['Vehicle Name', vehicle?.vehicle_name ?? '-'],
-    ['Vehicle Number', vehicle?.vehicle_number ?? '-'],
-    ['Route Name', vehicle?.route_name ?? '-'],
-    ['Total Distance', vehicle?.total_distance ?? '-'],
-    ['Total Seats', vehicle?.seats ?? '-'],
-    [
-      'Assigned Seats',
-      vehicle?.assigned_seats !== undefined && vehicle?.assigned_seats !== null ? vehicle.assigned_seats : '-',
-    ],
-    ['Onboarded Employee', vehicle?.onboarded_employee ?? '-'],
-    ['Speed', vehicle?.speed ?? '-'],
-    ['Driver Name', vehicle?.driver_name ?? '-'],
-    ['Driver Number', vehicle?.driver_number ?? '-'],
+  const fields = [
+    ['Vehicle Name', 'vehicle_name'],
+    ['Vehicle Number', 'vehicle_number'],
+    ['Route Name', 'route_name'],
+    ['Total Distance', 'total_distance'],
+    ['Total Seats', 'seats'],
+    ['Assigned Seats', (v) => v?.assigned_seats ?? '-'],
+    ['Onboarded Employee', 'onboarded_employee'],
+    ['Speed', 'speed'],
+    ['Driver Name', 'driver_name'],
+    ['Driver Number', 'driver_number'],
   ];
 
   return (
@@ -50,7 +66,6 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
           </button>
         </div>
       )}
-
       <div
         className={`fixed transition-all top-0 
           ${isShowPanel ? 'right-0' : 'right-[-340px]'}
@@ -62,7 +77,7 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
         }}>
         <div className='flex flex-col items-center bg-gradient-to-r from-[#1d31a6] to-[#3b5998] py-4 px-4 border-b border-gray-200'>
           <p className='font-bold text-lg text-white mb-1 truncate w-full text-center'>
-            {vehicle?.vehicle_name ?? '-'}
+            {renderValue(vehicle?.vehicle_name)}
           </p>
           <div className='flex justify-between items-center w-full gap-2 mt-1'>
             <span
@@ -81,21 +96,19 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
             </span>
           </div>
         </div>
-
         <div className='details-panel flex-1 py-4 px-4 bg-gray-50 overflow-y-auto'>
           <div className='grid grid-cols-1 gap-3'>
-            {details.map(([label, value]) => (
+            {fields.map(([label, keyOrFn]) => (
               <div
                 key={label}
                 className='flex justify-between items-center bg-white rounded-md px-3 py-2 shadow-sm border border-gray-100'>
                 <span className='text-gray-500 font-medium text-xs'>{label}</span>
                 <span className='text-gray-900 font-semibold text-xs'>
-                  {value !== undefined && value !== null && value !== '' ? value : '-'}
+                  {renderValue(typeof keyOrFn === 'function' ? keyOrFn(vehicle) : vehicle?.[keyOrFn])}
                 </span>
               </div>
             ))}
           </div>
-
           <div className='flex flex-wrap justify-center gap-3 mt-4 w-full'>
             <Link to='/report/parked'>
               <Btn>Reports</Btn>
@@ -115,11 +128,5 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
     </>
   );
 };
-
-const Btn = ({ children }) => (
-  <button className='bg-gradient-to-r from-[#1d31a6] to-[#3b5998] px-3 py-2 text-white rounded-lg text-xs font-semibold shadow hover:from-[#3b5998] hover:to-[#1d31a6] transition-all duration-150 cursor-pointer'>
-    {children}
-  </button>
-);
 
 export default MheStatusPanel;
