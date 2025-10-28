@@ -6,28 +6,31 @@ import MheStatusPanel from './components/MheStatusPanel';
 
 export default function Multitrack() {
   useFetchVehicles();
-
   const [showPanel, setShowPanel] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
-  const handleRightPanel = useCallback((vehicle) => {
-    setSelectedVehicle((prevVehicle) => {
-      if (prevVehicle?.id === vehicle?.id) {
+  const handleRightPanel = useCallback(
+    (vehicle) => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!vehicle) {
         setShowPanel(false);
-        return null;
+        setSelectedVehicle(null);
+      } else if (selectedVehicle?.id === vehicle.id) {
+        setShowPanel(false);
+        setTimeout(() => setSelectedVehicle(null), 300);
+      } else {
+        setSelectedVehicle(vehicle);
+        setShowPanel(true);
       }
-      setShowPanel(true);
-      return vehicle;
-    });
-  }, []);
+    },
+    [selectedVehicle]
+  );
 
   return (
     <div className='relative flex-1 h-screen rounded-md'>
       <TrackingPanel handleRightPanel={handleRightPanel} />
       <MapComponent selectedVehicle={selectedVehicle} />
-      {showPanel && selectedVehicle && (
-        <MheStatusPanel handleRightPanel={handleRightPanel} isShowPanel={showPanel} vehicle={selectedVehicle} />
-      )}
+      <MheStatusPanel handleRightPanel={() => handleRightPanel()} isShowPanel={showPanel} vehicle={selectedVehicle} />
     </div>
   );
 }

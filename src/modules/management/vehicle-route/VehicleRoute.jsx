@@ -137,7 +137,6 @@ function VehicleRoute() {
     }
   };
 
-  // Export only the first 100 vehicle routes, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -159,7 +158,6 @@ function VehicleRoute() {
     }
   };
 
-  // Export only the first 100 vehicle routes to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -182,7 +180,6 @@ function VehicleRoute() {
     }
   };
 
-  // Export a sample Excel file for vehicle route import template
   const handleSample = () =>
     exportToExcel({
       columns: [

@@ -124,7 +124,6 @@ function Feedback() {
     setPage(0);
   };
 
-  // Export only the first 100 feedbacks, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -146,7 +145,6 @@ function Feedback() {
     }
   };
 
-  // Export only the first 100 feedbacks to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);

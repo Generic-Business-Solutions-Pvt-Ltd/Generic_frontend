@@ -27,7 +27,6 @@ export default function ISearch({ onChange, value }) {
   );
 }
 
-// SVGs
 export const TotalSvg = () => (
   <svg xmlns='http://www.w3.org/2000/svg' width='50' viewBox='0 0 68 30' fill='none'>
     <path

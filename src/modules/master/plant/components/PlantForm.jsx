@@ -36,7 +36,7 @@ const PlantForm = ({ action, onClose, data, fetchData }) => {
       }
 
       setFormValues({ name: '' });
-      await fetchData(); // refresh list from server
+      await fetchData();
       onClose();
     } catch (error) {
       console.error('Submission error:', error);

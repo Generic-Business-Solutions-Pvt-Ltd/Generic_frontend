@@ -34,12 +34,10 @@ function SeatOccupancy() {
   const { seatOccupancyReportData, loading, error } = useSelector((state) => state?.vehicleReport);
   const { routes: vehicleRoutes } = useSelector((state) => state?.vehicleRoute?.vehicleRoutes || {});
 
-  // Fetch vehicle routes on mount
   useEffect(() => {
     if (company_id) dispatch(fetchVehicleRoutes({ company_id, limit: 100 }));
   }, [dispatch, company_id]);
 
-  // Fetch initial data
   useEffect(() => {
     if (company_id)
       dispatch(fetchSeatOccupancyReport({ company_id, page: page + 1, limit })).then((res) => {
@@ -47,7 +45,6 @@ function SeatOccupancy() {
       });
   }, [dispatch, company_id, page, limit]);
 
-  // Build API payload for filter
   const buildApiPayload = () => {
     const payload = { company_id };
     if (filterData.vehicles?.length) payload.vehicles = JSON.stringify(filterData.vehicles);
@@ -59,7 +56,6 @@ function SeatOccupancy() {
     return payload;
   };
 
-  // Export handlers
   const handleExport = () =>
     exportToExcel({
       columns,
@@ -75,7 +71,6 @@ function SeatOccupancy() {
       orientation: 'landscape',
     });
 
-  // Filter form submit
   const handleFormSubmit = (e) => {
     e.preventDefault();
     dispatch(fetchSeatOccupancyReport(buildApiPayload())).then((res) => {
@@ -88,12 +83,10 @@ function SeatOccupancy() {
     });
   };
 
-  // Reset filter
   const handleFormReset = () => {
     setFilterData({ vehicles: [], routes: [], fromDate: '', toDate: '' });
   };
 
-  // Map filteredData to tableData for display
   const tableData = Array.isArray(filteredData)
     ? filteredData.map((item) => {
         const totalAssigned =

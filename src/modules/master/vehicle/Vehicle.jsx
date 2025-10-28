@@ -225,7 +225,6 @@ function Vehicle() {
       fileName: 'vehicle_import_sample.xlsx',
     });
 
-  // Fix: format the filteredData before passing to CommonTable
   const tableData = formatVehicle(filteredData, page * limit);
 
   return (

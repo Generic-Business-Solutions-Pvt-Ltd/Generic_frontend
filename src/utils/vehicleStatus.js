@@ -34,34 +34,9 @@ export const processVehicles = (vehicles) => {
     const isNew = !hasTimestamp || !hasLat || !hasLng;
     const localTime = hasTimestamp ? new Date(v.timestamp).toISOString() : '';
 
-    const getDriverName = () =>
-      v.driver_name
-        ? v.driver_name
-        : v.driver && (v.driver.first_name || v.driver.last_name)
-        ? `${v.driver.first_name ?? ''}${v.driver.last_name ? ` ${v.driver.last_name}` : ''}`.trim() || '-'
-        : typeof v.driver === 'string'
-        ? v.driver
-        : '-';
-    const getDriverNumber = () =>
-      v.driver_number
-        ? v.driver_number
-        : v.driver?.phone_number
-        ? v.driver.phone_number
-        : v.driver?.number
-        ? v.driver.number
-        : '-';
-    const getRouteName = () =>
-      Array.isArray(v.routes) && v.routes[0]?.name
-        ? v.routes[0].name
-        : Array.isArray(v.route_details) && v.route_details[0]?.name
-        ? v.route_details[0].name
-        : '-';
-    const getAssignedSeats = () =>
-      Array.isArray(v.route_details) && v.route_details[0]?.total_assigned_seat != null
-        ? v.route_details[0].total_assigned_seat
-        : Array.isArray(v.routes) && v.routes[0]?.total_assigned_seat != null
-        ? v.routes[0].total_assigned_seat
-        : '-';
+    const getDriverName = () => (v.driver_name ? v.driver_name : '-');
+    const getDriverNumber = () => (v.driver?.phone_number ? v.driver.phone_number : '-');
+    const getRouteName = () => (Array.isArray(v.routes) && v.routes[0]?.name ? v.routes[0].name : '-');
 
     const status = isNew
       ? 'New'
@@ -87,7 +62,7 @@ export const processVehicles = (vehicles) => {
       route_name: getRouteName(),
       total_distance: getOdo(v),
       seats: v.seats ?? '-',
-      assigned_seats: getAssignedSeats(),
+      assigned_seats: '-',
       onboarded_employee: '-',
       speed: speedStr,
       driver_name: getDriverName(),

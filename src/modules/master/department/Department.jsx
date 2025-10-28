@@ -157,7 +157,6 @@ function Department() {
     }
   };
 
-  // Export a sample Excel file for department import template
   const handleSample = () =>
     exportToExcel({
       columns: [{ key: 'department_name', header: 'Department Name' }],

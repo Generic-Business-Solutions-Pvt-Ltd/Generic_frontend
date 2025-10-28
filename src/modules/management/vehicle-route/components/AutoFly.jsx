@@ -5,9 +5,7 @@ const AutoFlyTo = ({ lat, lng }) => {
   const map = useMap();
 
   useEffect(() => {
-    if (!isNaN(lat) && !isNaN(lng)) {
-      map.flyTo([parseFloat(lat), parseFloat(lng)], 13); // Zoom level 16 is close
-    }
+    if (!isNaN(lat) && !isNaN(lng)) map.flyTo([parseFloat(lat), parseFloat(lng)], 13);
   }, [lat, lng, map]);
 
   return null;

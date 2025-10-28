@@ -87,7 +87,6 @@ function Geofence() {
     }
   };
 
-  // Export only the first 100 geofences, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -109,7 +108,6 @@ function Geofence() {
     }
   };
 
-  // Export only the first 100 geofences to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);

@@ -107,24 +107,12 @@ function EmployeeForm() {
   useEffect(() => {
     if (rowData && (rowData.mode === 'edit' || rowData.mode === 'view')) {
       const d = rowData.rowData;
-      const firstName = d.first_name || (d.employeeName?.split(' ')[0] ?? '');
-      const lastName = d.last_name || (d.employeeName?.split(' ')[1] ?? '');
       const lat = d.boarding_latitude,
         lng = d.boarding_longitude;
-      const validLatLng =
-        lat !== undefined &&
-        lng !== undefined &&
-        lat !== null &&
-        lng !== null &&
-        lat !== '' &&
-        lng !== '' &&
-        !isNaN(Number(lat)) &&
-        !isNaN(Number(lng)) &&
-        Number(lat) !== 0 &&
-        Number(lng) !== 0;
+      const validLatLng = !!lat && !!lng && !isNaN(lat) && !isNaN(lng) && Number(lat) !== 0 && Number(lng) !== 0;
       setFormVal({
-        firstName,
-        lastName,
+        firstName: d.first_name || '',
+        lastName: d.last_name || '',
         employeeId: d.employee_id || '',
         punchId: d.punch_id || '',
         email: d.email || '',
@@ -272,9 +260,7 @@ function EmployeeForm() {
     [isViewMode]
   );
 
-  // Helper for rendering TextField/Autocomplete
   const renderField = (props) => <TextField {...props} size='small' fullWidth required={props.required} />;
-  // Modified renderAuto to add label for all select fields
   const renderAuto = (opts) => (
     <div>
       <label className='block mb-2 text-sm font-medium text-gray-900'>
@@ -308,7 +294,7 @@ function EmployeeForm() {
               <div className='grid grid-col-1 md:grid-cols-2 gap-3'>
                 {[
                   { name: 'firstName', label: 'Employee First Name', required: true },
-                  { name: 'lastName', label: 'Employee Last Name', required: true },
+                  { name: 'lastName', label: 'Employee Last Name' },
                   { name: 'employeeId', label: 'Employee Id', required: true },
                   { name: 'punchId', label: 'Punch Id', required: true },
                   { name: 'email', label: 'Email', type: 'email', required: true },

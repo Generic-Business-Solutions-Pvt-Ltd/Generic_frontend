@@ -107,7 +107,6 @@ function VehicalArrivalTime() {
   const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
-  // Add status to filterData
   const [filterData, setFilterData] = useState({ vehicles: [], routes: [], fromDate: '', toDate: '', status: 'all' });
   const [filteredData, setFilteredData] = useState([]);
 
@@ -115,12 +114,10 @@ function VehicalArrivalTime() {
   const { VehicleArrivalTimeReport, loading, error } = useSelector((state) => state?.vehicleReport);
   const { routes: vehicleRoutes } = useSelector((state) => state?.vehicleRoute?.vehicleRoutes || {});
 
-  // Fetch vehicle routes on mount
   useEffect(() => {
     if (company_id) dispatch(fetchVehicleRoutes({ company_id, limit: 100 }));
   }, [dispatch, company_id]);
 
-  // Fetch initial data
   useEffect(() => {
     if (company_id)
       dispatch(fetchVehicleArrivalData({ company_id, page: page + 1, limit })).then((res) => {
@@ -130,7 +127,6 @@ function VehicalArrivalTime() {
       });
   }, [dispatch, company_id, page, limit]);
 
-  // Build API payload for filter
   const buildApiPayload = () => {
     const payload = { company_id };
     if (filterData.vehicles?.length) payload.vehicles = JSON.stringify(filterData.vehicles);
@@ -143,7 +139,6 @@ function VehicalArrivalTime() {
     return payload;
   };
 
-  // Export handlers
   const handleExport = () =>
     exportToExcel({
       columns,
@@ -159,7 +154,6 @@ function VehicalArrivalTime() {
       orientation: 'landscape',
     });
 
-  // Filter form submit
   const handleFormSubmit = (e) => {
     e.preventDefault();
     dispatch(fetchVehicleArrivalData(buildApiPayload())).then((res) => {
@@ -172,7 +166,6 @@ function VehicalArrivalTime() {
     });
   };
 
-  // Reset filter
   const handleFormReset = () => {
     setFilterData({ vehicles: [], routes: [], fromDate: '', toDate: '', status: 'all' });
   };

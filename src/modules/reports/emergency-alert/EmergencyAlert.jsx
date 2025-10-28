@@ -59,12 +59,10 @@ function EmergencyAlert() {
   const { emergencyReportAlertData, loading, error } = useSelector((state) => state?.emergencyReportAlert || {});
   const { routes: vehicleRoutes } = useSelector((state) => state?.vehicleRoute?.vehicleRoutes || {});
 
-  // Fetch vehicle routes on mount
   useEffect(() => {
     if (company_id) dispatch(fetchVehicleRoutes({ company_id, limit: 100 }));
   }, [dispatch, company_id]);
 
-  // Fetch initial data
   useEffect(() => {
     if (company_id)
       dispatch(fetchEmergencyReportAlert({ company_id, page: page + 1, limit })).then((res) => {
@@ -72,7 +70,6 @@ function EmergencyAlert() {
       });
   }, [dispatch, company_id, page, limit]);
 
-  // Build API payload for filter
   const buildApiPayload = () => {
     const payload = { company_id };
     if (filterData.vehicles?.length) payload.vehicles = JSON.stringify(filterData.vehicles);
@@ -84,7 +81,6 @@ function EmergencyAlert() {
     return payload;
   };
 
-  // Export handlers
   const handleExport = () =>
     exportToExcel({
       columns,
@@ -100,7 +96,6 @@ function EmergencyAlert() {
       orientation: 'landscape',
     });
 
-  // Filter form submit
   const handleFormSubmit = (e) => {
     e.preventDefault();
     dispatch(fetchEmergencyReportAlert(buildApiPayload())).then((res) => {
@@ -108,12 +103,10 @@ function EmergencyAlert() {
     });
   };
 
-  // Reset filter
   const handleFormReset = () => {
     setFilterData({ vehicles: [], routes: [], fromDate: '', toDate: '' });
   };
 
-  // Map filteredData to tableData for display
   const tableData = Array.isArray(filteredData)
     ? filteredData.map((item) => {
         const latitude = item.latitude ?? '';

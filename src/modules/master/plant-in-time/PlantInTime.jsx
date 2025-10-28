@@ -140,7 +140,6 @@ function PlantInTime() {
     }
   };
 
-  // Export only the first 100 plant in time records, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -184,7 +183,6 @@ function PlantInTime() {
     }
   };
 
-  // Export a sample Excel file for plant in time import template
   const handleSample = () =>
     exportToExcel({
       columns: [

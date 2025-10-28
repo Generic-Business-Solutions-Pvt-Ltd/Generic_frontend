@@ -156,7 +156,6 @@ function Plant() {
     }
   };
 
-  // Export a sample Excel file for plant import template
   const handleSample = () =>
     exportToExcel({
       columns: [{ key: 'plant_name', header: 'Plant Name' }],

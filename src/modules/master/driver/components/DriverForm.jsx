@@ -44,7 +44,6 @@ const DriverForm = () => {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    // Fix: Actually handle dropped files
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       setFormValues((prev) => ({ ...prev, profilePhoto: file }));

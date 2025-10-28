@@ -145,7 +145,6 @@ function EmergencyAlert() {
     }
   };
 
-  // Export only the first 100 alerts, properly formatted
   const handleExport = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -167,7 +166,6 @@ function EmergencyAlert() {
     }
   };
 
-  // Export only the first 100 alerts to PDF, properly formatted
   const handleExportPDF = async () => {
     try {
       const exportPayload = buildApiPayload(1, 100);
@@ -190,7 +188,6 @@ function EmergencyAlert() {
     }
   };
 
-  // Export a sample Excel file for emergency alert import template
   const handleSample = () =>
     exportToExcel({
       columns: [

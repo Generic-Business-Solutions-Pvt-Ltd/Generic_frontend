@@ -28,7 +28,6 @@ function VehicleForm() {
 
   const [formVal, setFormVal] = useState(initialFormVal);
 
-  // Driver dropdown options
   const {
     options: driverOptions,
     loading,
@@ -42,11 +41,10 @@ function VehicleForm() {
     valueSelector: (d) => d.id,
   });
 
-  // Populate form values from rowData for edit/view
   useEffect(() => {
     if (rowData) {
       setFormVal({
-        selectedDriver: rowData.selectedDriver || rowData.driverID || '', // fallback for edit/create
+        selectedDriver: rowData.selectedDriver || rowData.driverID || '',
         vehicleName: rowData.vehicleName || rowData.busName || '',
         vehicleNumber: rowData.vehicleNumber || rowData.busNumber || '',
         simNumber: rowData.simNumber || '',

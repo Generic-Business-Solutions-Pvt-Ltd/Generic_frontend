@@ -26,7 +26,6 @@ const reportsSubMenus = [
       { to: '/report/offline', label: 'Offline' },
       { to: '/report/new-device', label: 'New Device' },
       { to: '/report/map-history', label: 'Map History' },
-      // { to: '/report/consolidated', label: 'Consolidated' },
     ],
   },
   {

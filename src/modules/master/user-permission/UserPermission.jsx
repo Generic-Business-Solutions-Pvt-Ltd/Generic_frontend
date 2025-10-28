@@ -42,7 +42,6 @@ function UserPermission() {
   const handleDelete = (row) => alert(`Deleting ${row.name}`);
 
   const handleExport = () => {
-    // Add your export logic here
     console.log('Exporting data...');
   };
 
