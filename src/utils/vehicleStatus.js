@@ -1,8 +1,4 @@
-const isOneHourOld = (date) => {
-  if (!date) return false;
-  const t = new Date(date);
-  return !isNaN(t) && Date.now() - t.getTime() > 3600000;
-};
+const isOneHourOld = (d) => !!d && !isNaN((d = new Date(d))) && Date.now() - d > 3600000;
 
 const colorOfDot = (ign, mov, time, isNew) =>
   isNew
@@ -11,10 +7,10 @@ const colorOfDot = (ign, mov, time, isNew) =>
     ? 'rgb(0,0,255)'
     : ign && mov
     ? 'rgb(0,128,0)'
-    : ign && !mov
-    ? 'rgb(255, 255, 0)'
+    : ign
+    ? 'rgb(255,255,0)'
     : !ign && !mov
-    ? 'rgb(255, 0, 0)'
+    ? 'rgb(255,0,0)'
     : 'gray';
 
 const getOdo = (v) => {
@@ -23,69 +19,65 @@ const getOdo = (v) => {
 };
 
 export const processVehicles = (vehicles) => {
-  const devices = (vehicles || []).filter(Boolean).map((v) => {
-    const io = Array.isArray(v.ioElements) ? v.ioElements : [];
-    const get = (id) => io.find((i) => i.id === id)?.value ?? 0;
-    const ignition = get(239) === 1,
-      movement = get(240) === 1;
-    const hasTimestamp = !!v.timestamp && !isNaN(new Date(v.timestamp));
-    const hasLat = v.latitude != null && Number(v.latitude) !== 0;
-    const hasLng = v.longitude != null && Number(v.longitude) !== 0;
-    const isNew = !hasTimestamp || !hasLat || !hasLng;
-    const localTime = hasTimestamp ? new Date(v.timestamp).toISOString() : '';
-
-    const getDriverName = () => (v.driver_name ? v.driver_name : '-');
-    const getDriverNumber = () => (v.driver?.phone_number ? v.driver.phone_number : '-');
-    const getRouteName = () => (Array.isArray(v.routes) && v.routes[0]?.name ? v.routes[0].name : '-');
-
-    const status = isNew
-      ? 'New'
-      : isOneHourOld(localTime)
-      ? 'Offline'
-      : ignition && movement
-      ? 'Running'
-      : ignition
-      ? 'Idle'
-      : !ignition && !movement
-      ? 'Parked'
-      : 'Unknown';
-
-    const speedStr =
-      typeof v.speed === 'number' || (!isNaN(Number(v.speed)) && v.speed !== null && v.speed !== undefined)
-        ? `${Number(v.speed)} km/h`
-        : '-';
-
+  const devs = (vehicles || []).filter(Boolean).map((v) => {
+    const io = Array.isArray(v.ioElements) ? v.ioElements : [],
+      get = (id) => io.find((i) => i.id === id)?.value ?? 0,
+      ign = get(239) === 1,
+      mov = get(240) === 1,
+      hasTs = !!v.timestamp && !isNaN(new Date(v.timestamp)),
+      hasLat = v.latitude != null && +v.latitude !== 0,
+      hasLng = v.longitude != null && +v.longitude !== 0,
+      isNew = !hasTs || !hasLat || !hasLng,
+      localTime = hasTs ? new Date(v.timestamp).toISOString() : '',
+      getName = () =>
+        v.driver && (v.driver.first_name || v.driver.last_name)
+          ? `${v.driver.first_name ?? ''} ${v.driver.last_name ?? ''}`.trim()
+          : '-',
+      getNum = () => v.driver?.phone_number ?? '-',
+      getRoute = () => v.routes?.[0]?.name ?? '-',
+      status = isNew
+        ? 'New'
+        : isOneHourOld(localTime)
+        ? 'Offline'
+        : ign && mov
+        ? 'Running'
+        : ign
+        ? 'Idle'
+        : !ign && !mov
+        ? 'Parked'
+        : 'Unknown',
+      speedStr =
+        typeof v.speed === 'number' || (!isNaN(Number(v.speed)) && v.speed != null) ? `${Number(v.speed)} km/h` : '-';
     return {
       id: v.id ?? '-',
       vehicle_name: v.vehicle_name ?? '-',
       vehicle_number: v.vehicle_number ?? '-',
-      route_name: getRouteName(),
+      route_name: getRoute(),
       total_distance: getOdo(v),
       seats: v.seats ?? '-',
       assigned_seats: '-',
       onboarded_employee: '-',
       speed: speedStr,
-      driver_name: getDriverName(),
-      driver_number: getDriverNumber(),
+      driver_name: getName(),
+      driver_number: getNum(),
       address: v.address ?? '-',
       timestamp: localTime,
       speed_limit: v.speed_limit ?? v.speed ?? 0,
-      lat: Number(v.latitude) || 0,
-      lng: Number(v.longitude) || 0,
+      lat: +v.latitude || 0,
+      lng: +v.longitude || 0,
       hasGPS: v.latitude != null && v.longitude != null,
-      hasIgnition: ignition,
+      hasIgnition: ign,
       hasBattery: get(68) > 0,
       hasExternalPower: get(66) > 0,
-      movement,
-      color: colorOfDot(ignition, movement, localTime, isNew),
+      movement: mov,
+      color: colorOfDot(ign, mov, localTime, isNew),
       isOffline: isOneHourOld(localTime),
       status,
     };
   });
-
-  const pick = (s) => devices.filter((d) => d.status === s);
+  const pick = (s) => devs.filter((d) => d.status === s);
   return {
-    devices,
+    devices: devs,
     runningDevices: pick('Running'),
     idelDevices: pick('Idle'),
     parkedDevices: pick('Parked'),
