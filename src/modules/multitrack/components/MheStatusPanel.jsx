@@ -12,20 +12,21 @@ const statusColorMap = {
   Unknown: '#000000',
 };
 
-const renderValue = (val) => {
-  if (!val && val !== 0) return '-';
-  if (Array.isArray(val)) return val.length ? val.join(', ') : '-';
-  if (typeof val === 'object') {
-    if (val.first_name && val.last_name) return `${val.first_name} ${val.last_name}`;
-    if (val.name) return val.name;
+const renderValue = (v) => {
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return '-';
+  if (typeof v === 'number' || (typeof v === 'string' && !isNaN(v))) return Number(v);
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '-';
+  if (typeof v === 'object') {
+    if (v.first_name && v.last_name) return `${v.first_name} ${v.last_name}`;
+    if (v.name) return v.name;
     try {
-      let str = JSON.stringify(val);
-      return str.length > 60 ? str.slice(0, 57) + '...' : str;
+      let s = JSON.stringify(v);
+      return s.length > 60 ? s.slice(0, 57) + '...' : s;
     } catch {
       return '-';
     }
   }
-  return val;
+  return v;
 };
 
 const Btn = ({ children }) => (
@@ -49,7 +50,7 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
     ['Total Distance', 'total_distance'],
     ['Today Distance', 'today_distance'],
     ['Total Seats', 'seats'],
-    ['Assigned Seats', 'assigned_'],
+    ['Assigned Seats', 'assigned_seats'],
     ['Onboarded Employee', 'onboarded_employee'],
     ['Speed', 'speed'],
     ['Driver Name', 'driver_name'],
