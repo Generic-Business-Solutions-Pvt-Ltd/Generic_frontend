@@ -1,9 +1,7 @@
 import moment from 'moment-timezone';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import ArrowRightIcon from '@mui/icons-material/ArrowForwardIos';
-import { fetchEmployeeOnboard } from '../../../redux/employeeSlice';
 
 const statusColorMap = {
   Running: '#008000',
@@ -37,22 +35,11 @@ const Btn = ({ children }) => (
 );
 
 const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
-  const dispatch = useDispatch();
   const [dt, setDt] = useState('');
-  const [count, setCount] = useState('-');
 
   useEffect(() => {
     setDt(moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm'));
   }, []);
-
-  useEffect(() => {
-    if (vehicle?.id) {
-      dispatch(fetchEmployeeOnboard({ vehicles: JSON.stringify([vehicle.id]) }))
-        .unwrap()
-        .then((d) => setCount(d?.pagination?.total || 0))
-        .catch(() => setCount('-'));
-    } else setCount('-');
-  }, [dispatch, vehicle?.id]);
 
   const status = vehicle?.status ?? 'Unknown';
   const fields = [
@@ -60,9 +47,10 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
     ['Vehicle Number', 'vehicle_number'],
     ['Route Name', 'route_name'],
     ['Total Distance', 'total_distance'],
+    ['Today Distance', 'today_distance'],
     ['Total Seats', 'seats'],
-    ['Assigned Seats', () => count],
-    ['Onboarded Employee', () => count],
+    ['Assigned Seats', 'assigned_'],
+    ['Onboarded Employee', 'onboarded_employee'],
     ['Speed', 'speed'],
     ['Driver Name', 'driver_name'],
     ['Driver Number', 'driver_number'],
@@ -92,14 +80,8 @@ const MheStatusPanel = ({ handleRightPanel, isShowPanel, vehicle }) => {
           </p>
           <div className='flex justify-between items-center w-full gap-2 mt-1'>
             <span
-              className='px-3 py-1 rounded-full text-xs font-semibold shadow'
-              style={{
-                backgroundColor: statusColorMap[status] || '#000',
-                color: '#fff',
-                minWidth: 60,
-                textAlign: 'center',
-                letterSpacing: 1,
-              }}>
+              className='px-3 py-1 rounded-full text-xs font-semibold shadow text-center tracking-wider min-w-[60px] text-white'
+              style={{ backgroundColor: statusColorMap[status] || '#000' }}>
               {status}
             </span>
             <span className='bg-white text-[#1d31a6] px-3 py-1 rounded-full text-xs font-semibold shadow border border-[#1d31a6]'>

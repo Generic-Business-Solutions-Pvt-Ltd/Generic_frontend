@@ -13,10 +13,7 @@ const colorOfDot = (ign, mov, time, isNew) =>
     ? 'rgb(255,0,0)'
     : 'gray';
 
-const getOdo = (v) => {
-  const el = v?.ioElements?.find((e) => e.propertyName === 'totalOdometer');
-  return el && Number(el.value) ? `${(el.value / 1000).toFixed(2)} km` : '-';
-};
+const getOdo = (val) => (typeof val === 'number' && !isNaN(val) ? `${val.toFixed(2)} km` : '-');
 
 export const processVehicles = (vehicles) => {
   const devs = (vehicles || []).filter(Boolean).map((v) => {
@@ -29,10 +26,7 @@ export const processVehicles = (vehicles) => {
       hasLng = v.longitude != null && +v.longitude !== 0,
       isNew = !hasTs || !hasLat || !hasLng,
       localTime = hasTs ? new Date(v.timestamp).toISOString() : '',
-      getName = () =>
-        v.driver && (v.driver.first_name || v.driver.last_name)
-          ? `${v.driver.first_name ?? ''} ${v.driver.last_name ?? ''}`.trim()
-          : '-',
+      getName = () => [v.driver?.first_name, v.driver?.last_name].filter(Boolean).join(' ') || '-',
       getNum = () => v.driver?.phone_number ?? '-',
       getRoute = () => v.routes?.[0]?.name ?? '-',
       status = isNew
@@ -48,15 +42,18 @@ export const processVehicles = (vehicles) => {
         : 'Unknown',
       speedStr =
         typeof v.speed === 'number' || (!isNaN(Number(v.speed)) && v.speed != null) ? `${Number(v.speed)} km/h` : '-';
+    const todayDistance = v.todayDistance?.distanceKm ?? v.today_distance ?? null;
+    const odoNum = io.find((e) => e.propertyName === 'totalOdometer')?.value;
     return {
       id: v.id ?? '-',
       vehicle_name: v.vehicle_name ?? '-',
       vehicle_number: v.vehicle_number ?? '-',
       route_name: getRoute(),
-      total_distance: getOdo(v),
+      total_distance: getOdo(typeof odoNum === 'number' ? odoNum / 1000 : undefined),
+      today_distance: getOdo(todayDistance),
       seats: v.seats ?? '-',
-      assigned_seats: '-',
-      onboarded_employee: '-',
+      assigned_seats: v.AssignedSeats ?? '-',
+      onboarded_employee: v.EmployeeOnboardCount ?? '-',
       speed: speedStr,
       driver_name: getName(),
       driver_number: getNum(),
