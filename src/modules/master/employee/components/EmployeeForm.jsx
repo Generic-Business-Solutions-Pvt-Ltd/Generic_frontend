@@ -1,11 +1,11 @@
 import L from 'leaflet';
-import { APIURL } from '../../../../constants';
-import { useDropdownOpt } from '../../../../hooks/useDropdownOpt';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AddressServices, ApiService } from '../../../../services';
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Autocomplete, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
+import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
+import { AddressServices, ApiService } from '../../../../services';
+import { useDropdownOpt } from '../../../../hooks/useDropdownOpt';
+import { APIURL } from '../../../../constants';
 
 const customIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
@@ -13,7 +13,7 @@ const customIcon = new L.Icon({
   iconAnchor: [16, 32],
 });
 
-const initialFormVal = {
+const INITIAL_FORM = {
   firstName: '',
   lastName: '',
   employeeId: '',
@@ -36,116 +36,192 @@ const initialFormVal = {
 const isValidLatLng = (lat, lng) => {
   const a = Number(lat),
     b = Number(lng);
-  return !isNaN(a) && !isNaN(b) && a && b && a >= -90 && a <= 90 && b >= -180 && b <= 180;
+  return !isNaN(a) && !isNaN(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180;
 };
-const formatLatLng = (v) =>
-  v === undefined || v === null || v === '' ? '' : isNaN(Number(v)) ? '' : Number(v).toFixed(7);
+
+const formatLatLng = (v) => (v === '' || isNaN(Number(v)) ? '' : Number(v).toFixed(7));
 
 function MapClickHandler({ onMapClick, disabled }) {
-  useMapEvents({
-    click: (e) => {
-      if (!disabled && typeof onMapClick === 'function') onMapClick(e.latlng);
-    },
-  });
+  useMapEvents({ click: (e) => !disabled && onMapClick?.(e.latlng) });
   return null;
 }
 
 function EmployeeForm() {
-  const navigate = useNavigate(),
-    location = useLocation(),
-    rowData = location.state;
+  const navigate = useNavigate();
+  const { state: rowData } = useLocation();
   const companyID = localStorage.getItem('company_id');
-  const fileInputRef = useRef(null),
-    addressTimeoutRef = useRef(null);
-  const [formVal, setFormVal] = useState(initialFormVal);
-  const [addressOnSearch, setAddressOnSearch] = useState([]);
-  const [selectedAddressOption, setSelectedAddressOption] = useState(null);
+  const isViewMode = rowData?.mode === 'view';
+  const isEditMode = rowData?.mode === 'edit';
 
-  const departmentDropdown = useDropdownOpt({
+  const fileInputRef = useRef(null);
+  const addressTimeoutRef = useRef(null);
+
+  const [formVal, setFormVal] = useState(INITIAL_FORM);
+  const [addressOptions, setAddressOptions] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  // Dropdowns
+  const dept = useDropdownOpt({
     apiUrl: APIURL.DEPARTMENTS,
     queryParams: { company_id: companyID },
     dataKey: 'departments',
     labelSelector: (d) => d?.department_name ?? '',
     valueSelector: (d) => d.id,
   });
-  const plantDropdown = useDropdownOpt({
+
+  const plant = useDropdownOpt({
     apiUrl: APIURL.PLANTS,
+    queryParams: { company_id: companyID },
     dataKey: 'plants',
-    queryParams: { company_id: companyID },
-    labelSelector: (d) => `${d?.plant_name}`,
+    labelSelector: (d) => d?.plant_name ?? '',
     valueSelector: (d) => d.id,
   });
-  const routeDropdown = useDropdownOpt({
+
+  const route = useDropdownOpt({
     apiUrl: APIURL.VEHICLE_ROUTE,
-    dataKey: 'routes',
     queryParams: { company_id: companyID },
-    labelSelector: (d) => `${d.name}`,
+    dataKey: 'routes',
+    labelSelector: (d) => d?.name ?? '',
     valueSelector: (d) => d.id,
   });
-  const bordingDropdown = useDropdownOpt({
+
+  const boarding = useDropdownOpt({
     apiUrl: formVal.vehicleRoute ? `${APIURL.VEHICLE_ROUTE}/${formVal.vehicleRoute}/stops` : null,
-    labelSelector: (d) => `${d.address}`,
-    valueSelector: (d) => d.id,
     dataKey: 'stops',
+    labelSelector: (d) => d?.address ?? '',
+    valueSelector: (d) => d.id,
   });
+
+  // Load form data from rowData
+  useEffect(() => {
+    if (!rowData?.rowData || !['edit', 'view'].includes(rowData?.mode)) return;
+    const d = rowData.rowData;
+    const lat = d.boarding_latitude ? String(d.boarding_latitude) : '';
+    const lng = d.boarding_longitude ? String(d.boarding_longitude) : '';
+
+    const address = d.boarding_address?.trim() || d.address?.trim() || '';
+
+    setFormVal({
+      firstName: d.first_name || '',
+      lastName: d.last_name || '',
+      employeeId: d.employee_id || '',
+      punchId: d.punch_id || '',
+      email: d.email || '',
+      phoneNumber: d.phone_number?.trim() || '',
+      selectedDepartment: d.department_id || '',
+      selectedPlant: d.plant_id || '',
+      dateOfJoining: d.date_of_joining || '',
+      dateOfBirth: d.date_of_birth || '',
+      selectedGender: d.gender === 'Male' ? '2' : d.gender === 'Female' ? '1' : '',
+      vehicleRoute: d.vehicle_route_id || '',
+      boardingPoint: d.boarding_stop_id || '',
+      profilePhoto: null,
+      address: address,
+      latitude: lat,
+      longitude: lng,
+    });
+
+    if (address) {
+      setSelectedAddress({
+        label: address,
+        value: `${lat}-${lng}`,
+        otherData: { display_name: address, lat: lat || '', lon: lng || '' },
+      });
+    }
+  }, [rowData, isEditMode]);
+
+  // Remap dropdowns by name after loading
+  useEffect(() => {
+    if (!rowData?.rowData || !['edit', 'view'].includes(rowData?.mode)) return;
+    const { department, plant: plantName } = rowData.rowData;
+    const deptOpt = dept.options.find((x) => x.label === department);
+    const plantOpt = plant.options.find((x) => x.label === plantName);
+
+    if (deptOpt || plantOpt) {
+      setFormVal((prev) => ({
+        ...prev,
+        selectedDepartment: deptOpt?.value || prev.selectedDepartment,
+        selectedPlant: plantOpt?.value || prev.selectedPlant,
+      }));
+    }
+  }, [dept.options, plant.options, rowData, isEditMode]);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormVal((prev) => ({
-      ...prev,
-      [name]: name === 'latitude' || name === 'longitude' ? (value === '' ? '' : formatLatLng(value)) : value,
-    }));
+    setFormVal((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
-    if (e.dataTransfer.files?.length) setFormVal((prev) => ({ ...prev, profilePhoto: e.dataTransfer.files[0] }));
-    e.dataTransfer.clearData();
-  }, []);
-  const handleDragOver = useCallback((e) => e.preventDefault(), []);
-
-  useEffect(() => {
-    if (rowData && (rowData.mode === 'edit' || rowData.mode === 'view')) {
-      const d = rowData.rowData;
-      const lat = d.boarding_latitude,
-        lng = d.boarding_longitude;
-      const validLatLng = !!lat && !!lng && !isNaN(lat) && !isNaN(lng) && Number(lat) !== 0 && Number(lng) !== 0;
-      setFormVal({
-        firstName: d.first_name || '',
-        lastName: d.last_name || '',
-        employeeId: d.employee_id || '',
-        punchId: d.punch_id || '',
-        email: d.email || '',
-        phoneNumber: d.phone_number || '',
-        selectedDepartment: d.departmentId || '',
-        selectedPlant: d.plantId || '',
-        dateOfJoining: d.doj || '',
-        dateOfBirth: d.dob || '',
-        selectedGender: d.gender === 'Male' ? '2' : d.gender === 'Female' ? '1' : '',
-        vehicleRoute: d.vehicle_route_id || '',
-        boardingPoint: d.boarding_address || '',
-        profilePhoto: null,
-        address: d.address || '',
-        latitude: validLatLng ? formatLatLng(lat) : '',
-        longitude: validLatLng ? formatLatLng(lng) : '',
-      });
-      setSelectedAddressOption(
-        d.address && validLatLng
-          ? {
-              label: d.address,
-              value: `${formatLatLng(lat)}-${formatLatLng(lng)}`,
-              otherData: { display_name: d.address, lat: formatLatLng(lat), lon: formatLatLng(lng) },
-            }
-          : null
-      );
+    if (e.dataTransfer.files?.length) {
+      setFormVal((prev) => ({ ...prev, profilePhoto: e.dataTransfer.files[0] }));
     }
-  }, [rowData]);
+  }, []);
 
-  const handleFormSubmit = useCallback(
+  const handleAddressSearch = useCallback((_, value) => {
+    if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
+    if (!value) return;
+    addressTimeoutRef.current = setTimeout(async () => {
+      const res = await AddressServices.getLocationFromName(value);
+      if (Array.isArray(res)) {
+        setAddressOptions(
+          res.map((item) => ({
+            label: item.display_name,
+            value: item.place_id,
+            otherData: { ...item, lat: String(item.lat || ''), lon: String(item.lon || '') },
+          }))
+        );
+      }
+    }, 500);
+  }, []);
+
+  const handleAddressChange = useCallback((_, val) => {
+    setSelectedAddress(val);
+    if (val?.otherData) {
+      setFormVal((prev) => ({
+        ...prev,
+        address: val.otherData.display_name,
+        latitude: val.otherData.lat,
+        longitude: val.otherData.lon,
+      }));
+    } else {
+      setFormVal((prev) => ({ ...prev, address: '', latitude: '', longitude: '' }));
+    }
+  }, []);
+
+  const handleMapClick = useCallback(
+    async ({ lat, lng }) => {
+      if (isViewMode) return;
+      const res = await AddressServices.getLocationFromLatLng(lat, lng);
+      const addr = Array.isArray(res) && res[0]?.display_name ? res[0].display_name : '';
+      setFormVal((prev) => ({
+        ...prev,
+        latitude: String(lat),
+        longitude: String(lng),
+        address: addr || prev.address,
+      }));
+      if (addr) {
+        setSelectedAddress({
+          label: addr,
+          value: `${lat}-${lng}`,
+          otherData: { display_name: addr, lat: String(lat), lon: String(lng) },
+        });
+      }
+    },
+    [isViewMode]
+  );
+
+  const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-      const latitude = formVal.latitude === '' ? '' : Number(formVal.latitude).toFixed(7);
-      const longitude = formVal.longitude === '' ? '' : Number(formVal.longitude).toFixed(7);
+      const lat = formatLatLng(formVal.latitude);
+      const lng = formatLatLng(formVal.longitude);
+
+      if (!isValidLatLng(lat, lng)) {
+        alert('Invalid Latitude/Longitude');
+        return;
+      }
+
       const payload = {
         first_name: formVal.firstName,
         last_name: formVal.lastName,
@@ -159,434 +235,248 @@ function EmployeeForm() {
         date_of_birth: formVal.dateOfBirth,
         gender: formVal.selectedGender,
         vehicle_route_id: formVal.vehicleRoute,
-        boarding_address: formVal.boardingPoint,
-        profile_img: formVal.profilePhoto?.name,
-        latitude: latitude === '' ? '' : parseFloat(latitude),
-        longitude: longitude === '' ? '' : parseFloat(longitude),
-        address: formVal.address,
-        boarding_latitude: latitude === '' ? '' : parseFloat(latitude),
-        boarding_longitude: longitude === '' ? '' : parseFloat(longitude),
+        boarding_stop_id: formVal.boardingPoint,
+        boarding_address: formVal.address,
+        profile_img: formVal.profilePhoto?.name || '',
+        latitude: lat ? parseFloat(lat) : '',
+        longitude: lng ? parseFloat(lng) : '',
+        boarding_latitude: lat ? parseFloat(lat) : '',
+        boarding_longitude: lng ? parseFloat(lng) : '',
         status_id: 1,
       };
-      let res = rowData
-        ? await ApiService.put(`${APIURL.EMPLOYEE}/${rowData.rowData.actual_id}?company_id=${companyID}`, payload)
-        : await ApiService.post(APIURL.EMPLOYEE, payload);
+
+      const url = isEditMode
+        ? `${APIURL.EMPLOYEE}/${rowData.rowData.actual_id}?company_id=${companyID}`
+        : APIURL.EMPLOYEE;
+
+      const res = isEditMode ? await ApiService.put(url, payload) : await ApiService.post(url, payload);
       if (res?.success) navigate('/master/employee');
-      else {
-        alert(res?.message || 'Something went wrong.');
-        console.error(res?.message);
-      }
+      else alert(res?.message || 'Error saving employee');
     },
-    [formVal, rowData, companyID, navigate]
+    [formVal, isEditMode, rowData, companyID, navigate]
   );
-
-  const getValue = (opts, v) => opts.find((opt) => opt.value === v) || null;
-  const departmentValue = useMemo(
-    () => getValue(departmentDropdown.options, formVal.selectedDepartment),
-    [departmentDropdown.options, formVal.selectedDepartment]
-  );
-  const plantValue = useMemo(
-    () => getValue(plantDropdown.options, formVal.selectedPlant),
-    [plantDropdown.options, formVal.selectedPlant]
-  );
-  const routeValue = useMemo(
-    () => getValue(routeDropdown.options, formVal.vehicleRoute),
-    [routeDropdown.options, formVal.vehicleRoute]
-  );
-  const boardingValue = useMemo(
-    () => getValue(bordingDropdown.options, formVal.boardingPoint),
-    [bordingDropdown.options, formVal.boardingPoint]
-  );
-
-  const handleAddressInputChange = useCallback((_, value) => {
-    if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
-    addressTimeoutRef.current = setTimeout(async () => {
-      if (value.length > 0) setAddressOnSearch((await AddressServices.getLocationFromName(value)) || []);
-    }, 500);
-  }, []);
-  const handleAddressChange = useCallback((_, newValue) => {
-    setSelectedAddressOption(newValue);
-    setFormVal((prev) =>
-      newValue
-        ? {
-            ...prev,
-            address: newValue.otherData.display_name,
-            latitude: formatLatLng(newValue.otherData.lat),
-            longitude: formatLatLng(newValue.otherData.lon),
-          }
-        : { ...prev, address: '', latitude: '', longitude: '' }
-    );
-  }, []);
 
   const profileImageSrc = useMemo(() => {
     if (!formVal.profilePhoto) return null;
-    if (typeof formVal.profilePhoto === 'string') return formVal.profilePhoto;
-    return URL.createObjectURL(formVal.profilePhoto);
+    return typeof formVal.profilePhoto === 'string' ? formVal.profilePhoto : URL.createObjectURL(formVal.profilePhoto);
   }, [formVal.profilePhoto]);
 
-  const addressOptions = Array.isArray(addressOnSearch)
-    ? addressOnSearch.map((item) => ({
-        label: item.display_name,
-        value: item.place_id,
-        otherData: { ...item, lat: formatLatLng(item.lat), lon: formatLatLng(item.lon) },
-      }))
-    : [];
+  const getDropdownValue = (opts, val) => opts.find((o) => o.value === val) || null;
+  const hasValidCoords = isValidLatLng(formVal.latitude, formVal.longitude);
 
-  const lat = formVal.latitude,
-    lng = formVal.longitude,
-    hasValidLatLng = isValidLatLng(lat, lng);
-  const isViewMode = rowData && rowData.mode === 'view';
-
-  const handleMapClick = useCallback(
-    async ({ lat, lng }) => {
-      if (isViewMode) return;
-      let address = '';
-      const res = await AddressServices.getLocationFromLatLng(lat, lng);
-      if (Array.isArray(res) && res.length > 0) address = res[0].display_name;
-
-      setFormVal((prev) => ({
-        ...prev,
-        latitude: formatLatLng(lat),
-        longitude: formatLatLng(lng),
-        address: address || prev.address,
-      }));
-      if (address)
-        setSelectedAddressOption({
-          label: address || `Lat: ${formatLatLng(lat)}, Lng: ${formatLatLng(lng)}`,
-          value: `${formatLatLng(lat)}-${formatLatLng(lng)}`,
-          otherData: { display_name: address || '', lat: formatLatLng(lat), lon: formatLatLng(lng) },
-        });
-    },
-    [isViewMode]
-  );
-
-  const renderField = (props) => <TextField {...props} size='small' fullWidth required={props.required} />;
-  const renderAuto = (opts) => (
+  const TextInput = ({ name, label, type = 'text', required, placeholder }) => (
     <div>
       <label className='block mb-2 text-sm font-medium text-gray-900'>
-        {opts.label} {opts.required && <span className='text-red-500'>*</span>}
+        {label} {required && <span className='text-red-500'>*</span>}
+      </label>
+      <TextField
+        size='small'
+        name={name}
+        type={type}
+        value={formVal[name]}
+        onChange={handleChange}
+        disabled={isViewMode}
+        fullWidth
+        required={required}
+        placeholder={placeholder || label}
+      />
+    </div>
+  );
+
+  const AutoSelect = ({ label, options, value, loading, onChange, required }) => (
+    <div>
+      <label className='block mb-2 text-sm font-medium text-gray-900'>
+        {label} {required && <span className='text-red-500'>*</span>}
       </label>
       <Autocomplete
         disablePortal
-        options={opts.options}
-        loading={opts.loading}
-        value={opts.value}
-        onChange={opts.onChange}
+        options={options}
+        loading={loading}
+        value={value}
+        onChange={onChange}
         isOptionEqualToValue={(o, v) => o?.value === v?.value}
         getOptionLabel={(o) => o?.label || ''}
-        renderInput={(params) => renderField({ ...params, label: opts.label, required: opts.required })}
+        renderInput={(params) => <TextField {...params} size='small' fullWidth />}
         disabled={isViewMode}
       />
     </div>
   );
 
   return (
-    <div className='w-full h-full p-2'>
-      <div className='flex justify-between items-center'>
-        <h1 className='text-2xl font-bold mb-4 text-[#07163d]'>Employee</h1>
-      </div>
-      <form onSubmit={handleFormSubmit}>
-        <div className='grid grid-col-1 md:grid-cols-2 gap-3'>
-          <div className='bg-white rounded-sm border-t-3 border-[#07163d]'>
-            <h2 className='text-lg p-3 text-gray-700'>Employee Detail</h2>
-            <hr className='border border-gray-300' />
-            <div className='p-5'>
-              <div className='grid grid-col-1 md:grid-cols-2 gap-3'>
-                {[
-                  { name: 'firstName', label: 'Employee First Name', required: true },
-                  { name: 'lastName', label: 'Employee Last Name' },
-                  { name: 'employeeId', label: 'Employee Id', required: true },
-                  { name: 'punchId', label: 'Punch Id', required: true },
-                  { name: 'email', label: 'Email', type: 'email', required: true },
-                  { name: 'phoneNumber', label: 'Phone Number', type: 'number', required: true },
-                ].map((f) => (
-                  <div key={f.name}>
-                    <label className='block mb-2 text-sm font-medium text-gray-900'>
-                      {f.label} {f.required && <span className='text-red-500'>*</span>}
-                    </label>
-                    <TextField
-                      size='small'
-                      type={f.type || 'text'}
-                      name={f.name}
-                      id={f.name}
-                      fullWidth
-                      required={f.required}
-                      placeholder={f.label}
-                      value={formVal[f.name]}
-                      onChange={handleChange}
-                      disabled={isViewMode}
-                    />
+    <div className='w-full p-2'>
+      <h1 className='text-2xl font-bold mb-4 text-[#07163d]'>Employee</h1>
+
+      <form onSubmit={handleSubmit}>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+          {/* Left Panel */}
+          <div className='bg-white rounded-sm border-t-4 border-[#07163d] p-5'>
+            <h2 className='text-lg text-gray-700 mb-3 font-semibold'>Employee Details</h2>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+              <TextInput name='firstName' label='First Name' required placeholder='Enter first name' />
+              <TextInput name='lastName' label='Last Name' placeholder='Enter last name' />
+              <TextInput name='employeeId' label='Employee ID' required placeholder='e.g., EMP001' />
+              <TextInput name='punchId' label='Punch ID' required placeholder='Enter punch ID' />
+              <TextInput name='email' label='Email' type='email' required placeholder='example@company.com' />
+              <TextInput name='phoneNumber' label='Phone Number' required placeholder='10-digit number' />
+
+              <AutoSelect
+                label='Department'
+                options={dept.options}
+                value={getDropdownValue(dept.options, formVal.selectedDepartment)}
+                loading={dept.loading}
+                onChange={(_, v) => setFormVal((p) => ({ ...p, selectedDepartment: v?.value || '' }))}
+                required
+              />
+              <AutoSelect
+                label='Plant'
+                options={plant.options}
+                value={getDropdownValue(plant.options, formVal.selectedPlant)}
+                loading={plant.loading}
+                onChange={(_, v) => setFormVal((p) => ({ ...p, selectedPlant: v?.value || '' }))}
+                required
+              />
+
+              <TextInput name='dateOfJoining' label='Joining Date' type='date' required />
+              <TextInput name='dateOfBirth' label='Date of Birth' type='date' required />
+
+              <AutoSelect
+                label='Route'
+                options={route.options}
+                value={getDropdownValue(route.options, formVal.vehicleRoute)}
+                loading={route.loading}
+                onChange={(_, v) => setFormVal((p) => ({ ...p, vehicleRoute: v?.value || '' }))}
+              />
+              <AutoSelect
+                label='Boarding Point'
+                options={boarding.options}
+                value={getDropdownValue(boarding.options, formVal.boardingPoint)}
+                loading={boarding.loading}
+                onChange={(_, v) => setFormVal((p) => ({ ...p, boardingPoint: v?.value || '' }))}
+              />
+
+              <FormControl>
+                <FormLabel>
+                  Gender <span className='text-red-500'>*</span>
+                </FormLabel>
+                <RadioGroup value={formVal.selectedGender} name='selectedGender' onChange={handleChange}>
+                  <FormControlLabel value='1' control={<Radio disabled={isViewMode} />} label='Female' />
+                  <FormControlLabel value='2' control={<Radio disabled={isViewMode} />} label='Male' />
+                </RadioGroup>
+              </FormControl>
+              <div>
+                <label className='block mb-2 text-sm font-medium'>Profile Image</label>
+                <div
+                  className='flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 hover:bg-gray-100'
+                  onClick={() => !isViewMode && fileInputRef.current?.click()}
+                  onDrop={!isViewMode ? handleDrop : undefined}
+                  onDragOver={!isViewMode ? (e) => e.preventDefault() : undefined}
+                  style={isViewMode ? { pointerEvents: 'none', opacity: 0.7 } : { cursor: 'pointer' }}>
+                  <div className='flex flex-col items-center justify-center pt-5 pb-6'>
+                    <svg className='w-8 h-8 mb-4 text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 4v16m8-8H4' />
+                    </svg>
+                    <p className='text-sm text-gray-500'>
+                      <span className='font-semibold'>Click</span> or drag image
+                    </p>
                   </div>
-                ))}
-                {renderAuto({
-                  options: departmentDropdown.options,
-                  loading: departmentDropdown.loading,
-                  value: departmentValue,
-                  onChange: (_, v) => setFormVal((prev) => ({ ...prev, selectedDepartment: v ? v.value : '' })),
-                  label: 'Select Department',
-                  required: true,
-                })}
-                {departmentDropdown.error && (
-                  <p className='text-red-500 text-sm mt-1'>
-                    Failed to load Department.{' '}
-                    <button
-                      type='button'
-                      onClick={departmentDropdown.refetch}
-                      className='text-blue-600 underline hover:text-blue-800 transition-colors duration-200'>
-                      Retry
-                    </button>
-                  </p>
-                )}
-                {renderAuto({
-                  options: plantDropdown.options,
-                  loading: plantDropdown.loading,
-                  value: plantValue,
-                  onChange: (_, v) => setFormVal((prev) => ({ ...prev, selectedPlant: v ? v.value : '' })),
-                  label: 'Select Plant',
-                  required: true,
-                })}
-                {plantDropdown.error && (
-                  <p className='text-red-500 text-sm mt-1'>
-                    Failed to load Plant.{' '}
-                    <button
-                      type='button'
-                      onClick={plantDropdown.refetch}
-                      className='text-blue-600 underline hover:text-blue-800 transition-colors duration-200'>
-                      Retry
-                    </button>
-                  </p>
-                )}
-                {[
-                  { name: 'dateOfJoining', label: 'Joining Date' },
-                  { name: 'dateOfBirth', label: 'Date Of Birth' },
-                ].map((f) => (
-                  <div key={f.name}>
-                    <label className='block mb-2 text-sm font-medium text-gray-900'>
-                      {f.label} <span className='text-red-500'>*</span>
-                    </label>
-                    <TextField
-                      size='small'
-                      type='date'
-                      name={f.name}
-                      id={f.name}
-                      fullWidth
-                      required
-                      placeholder={f.label}
-                      value={formVal[f.name]}
-                      onChange={handleChange}
-                      disabled={isViewMode}
-                    />
-                  </div>
-                ))}
-                {renderAuto({
-                  options: routeDropdown.options,
-                  loading: routeDropdown.loading,
-                  value: routeValue,
-                  onChange: (_, v) => setFormVal((prev) => ({ ...prev, vehicleRoute: v ? v.value : '' })),
-                  label: 'Select Route',
-                  required: false,
-                })}
-                {routeDropdown.error && (
-                  <p className='text-red-500 text-sm mt-1'>
-                    Failed to load Route.{' '}
-                    <button
-                      type='button'
-                      onClick={routeDropdown.refetch}
-                      className='text-blue-600 underline hover:text-blue-800 transition-colors duration-200'>
-                      Retry
-                    </button>
-                  </p>
-                )}
-                {renderAuto({
-                  options: bordingDropdown.options,
-                  loading: bordingDropdown.loading,
-                  value: boardingValue,
-                  onChange: (_, v) => setFormVal((prev) => ({ ...prev, boardingPoint: v ? v.value : '' })),
-                  label: 'Select Boarding Points',
-                  required: false,
-                })}
-                {bordingDropdown.error && (
-                  <p className='text-red-500 text-sm mt-1'>
-                    Failed to load Boarding Point.{' '}
-                    <button
-                      type='button'
-                      onClick={bordingDropdown.refetch}
-                      className='text-blue-600 underline hover:text-blue-800 transition-colors duration-200'>
-                      Retry
-                    </button>
-                  </p>
-                )}
-                <div>
-                  <FormControl>
-                    <FormLabel id='gender-radio'>
-                      Gender <span className='text-red-500'>*</span>
-                    </FormLabel>
-                    <RadioGroup
-                      aria-labelledby='gender-radio'
-                      value={formVal.selectedGender}
-                      name='selectedGender'
-                      onChange={handleChange}
-                      disabled={isViewMode}>
-                      <FormControlLabel value='1' control={<Radio disabled={isViewMode} />} label='Female' />
-                      <FormControlLabel value='2' control={<Radio disabled={isViewMode} />} label='Male' />
-                    </RadioGroup>
-                  </FormControl>
+                  <input
+                    type='file'
+                    ref={fileInputRef}
+                    className='hidden'
+                    accept='image/*'
+                    onChange={(e) => setFormVal((p) => ({ ...p, profilePhoto: e.target.files?.[0] }))}
+                  />
                 </div>
-                <div>
-                  <label className='block mb-2 text-sm font-medium text-gray-900'>Profile Image</label>
-                  <div className='flex items-center justify-center w-full'>
-                    <div
-                      className='flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100'
-                      onClick={() => !isViewMode && fileInputRef.current?.click()}
-                      onDrop={isViewMode ? undefined : handleDrop}
-                      onDragOver={isViewMode ? undefined : handleDragOver}
-                      style={isViewMode ? { pointerEvents: 'none', opacity: 0.7 } : {}}>
-                      <div className='flex flex-col items-center justify-center pt-5 pb-6'>
-                        <svg
-                          className='w-8 h-8 mb-4 text-gray-500'
-                          aria-hidden='true'
-                          xmlns='http://www.w3.org/2000/svg'
-                          fill='none'
-                          viewBox='0 0 20 16'>
-                          <path
-                            stroke='currentColor'
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth='2'
-                            d='M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2'
-                          />
-                        </svg>
-                        <p className='mb-2 text-sm text-gray-500 dark:text-gray-400'>
-                          <span className='font-semibold'>Click to upload</span> or drag and drop
-                        </p>
-                        <p className='text-xs text-gray-500 dark:text-gray-400'>
-                          SVG, PNG, JPG or GIF (MAX. 800x400px)
-                        </p>
-                      </div>
-                      <input
-                        type='file'
-                        className='hidden'
-                        ref={fileInputRef}
-                        name='profile'
-                        id='profile'
-                        onChange={(e) => {
-                          if (e.target.files.length > 0)
-                            setFormVal((prev) => ({ ...prev, profilePhoto: e.target.files[0] }));
-                        }}
-                        disabled={isViewMode}
-                      />
-                    </div>
-                  </div>
-                  {profileImageSrc && (
-                    <img
-                      src={profileImageSrc}
-                      alt='Preview'
-                      className='w-24 h-24 object-cover rounded-full border mt-3'
-                    />
-                  )}
-                </div>
+                {profileImageSrc && (
+                  <img src={profileImageSrc} alt='Profile' className='mt-2 w-24 h-24 object-cover rounded-md border' />
+                )}
               </div>
             </div>
           </div>
-          <div className='bg-white rounded-sm border-t-3 border-[#07163d]'>
-            <h2 className='text-lg p-3 text-gray-700'>Employee Address</h2>
-            <hr className='border border-gray-300' />
-            <div className='p-5'>
-              <div className='grid grid-col-1 md:grid-cols-1 gap-3'>
-                <div>
-                  <label className='block mb-2 text-sm font-medium text-gray-900'>Address</label>
-                  <Autocomplete
-                    disablePortal
-                    options={addressOptions}
-                    isOptionEqualToValue={(o, v) => o?.value === v?.value}
-                    getOptionLabel={(o) => o.label}
-                    size='small'
-                    renderInput={(params) => <TextField {...params} placeholder='Address' label='Address' />}
-                    onInputChange={handleAddressInputChange}
-                    value={selectedAddressOption}
-                    onChange={handleAddressChange}
-                    disabled={isViewMode}
-                  />
-                </div>
+
+          {/* Right Panel - Map */}
+          <div className='relatve bg-white rounded-sm border-t-4 border-[#07163d] p-5'>
+            <h2 className='text-lg text-gray-700 mb-3 font-semibold'>Boarding Location</h2>
+
+            <label className='block mb-2 text-sm font-medium text-gray-900'>
+              Address <span className='text-red-500'>*</span>
+            </label>
+            <Autocomplete
+              disablePortal
+              options={addressOptions}
+              value={selectedAddress}
+              onInputChange={handleAddressSearch}
+              onChange={handleAddressChange}
+              isOptionEqualToValue={(o, v) => o?.label === v?.label}
+              getOptionLabel={(o) => o?.label || ''}
+              renderInput={(params) => <TextField {...params} size='small' fullWidth placeholder='Search address' />}
+              disabled={isViewMode}
+            />
+
+            <div className='grid grid-cols-2 gap-3 mt-4'>
+              <div>
+                <label className='block mb-2 text-sm font-medium'>
+                  Latitude <span className='text-red-500'>*</span>
+                </label>
+                <TextField
+                  size='small'
+                  name='latitude'
+                  value={formVal.latitude}
+                  onChange={handleChange}
+                  disabled={isViewMode}
+                  fullWidth
+                  error={formVal.latitude !== '' && isNaN(Number(formVal.latitude))}
+                  helperText={formVal.latitude !== '' && isNaN(Number(formVal.latitude)) ? 'Must be a number' : ''}
+                />
               </div>
-              <div className='grid grid-col-1 md:grid-cols-2 gap-3 mt-3'>
-                {['latitude', 'longitude'].map((name) => (
-                  <div key={name}>
-                    <label className='block mb-2 text-sm font-medium text-gray-900'>
-                      {name.charAt(0).toUpperCase() + name.slice(1)} <span className='text-red-500'>*</span>
-                    </label>
-                    <TextField
-                      size='small'
-                      type='text'
-                      name={name}
-                      id={name}
-                      fullWidth
-                      required
-                      placeholder={name.charAt(0).toUpperCase() + name.slice(1)}
-                      value={formVal[name]}
-                      onChange={handleChange}
-                      disabled={isViewMode}
-                      inputProps={{ inputMode: 'decimal', pattern: '[0-9.\\-]*' }}
-                    />
-                  </div>
-                ))}
+              <div>
+                <label className='block mb-2 text-sm font-medium'>
+                  Longitude <span className='text-red-500'>*</span>
+                </label>
+                <TextField
+                  size='small'
+                  name='longitude'
+                  value={formVal.longitude}
+                  onChange={handleChange}
+                  disabled={isViewMode}
+                  fullWidth
+                  error={formVal.longitude !== '' && isNaN(Number(formVal.longitude))}
+                  helperText={formVal.longitude !== '' && isNaN(Number(formVal.longitude)) ? 'Must be a number' : ''}
+                />
               </div>
-              <div className='grid grid-col-1 md:grid-cols-1 gap-3 mt-3'>
-                <div>
-                  <label className='block mb-2 text-sm font-medium text-gray-900'>
-                    Map <span className='text-red-500'>*</span>
-                  </label>
-                  <div className='map w-full h-96 bg-gray-500 rounded-2xl'>
-                    <MapContainer
-                      center={[
-                        hasValidLatLng ? parseFloat(formVal.latitude) : 20.5937,
-                        hasValidLatLng ? parseFloat(formVal.longitude) : 78.9629,
-                      ]}
-                      zoom={hasValidLatLng ? 15 : 5}
-                      className='w-full h-full'>
-                      <TileLayer
-                        url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                        attribution='&copy; OpenStreetMap contributors'
-                      />
-                      <MapClickHandler onMapClick={handleMapClick} disabled={isViewMode} />
-                      {hasValidLatLng && (
-                        <Marker
-                          key={formVal.latitude + '-' + formVal.longitude}
-                          position={[
-                            parseFloat(formatLatLng(formVal.latitude)),
-                            parseFloat(formatLatLng(formVal.longitude)),
-                          ]}
-                          icon={customIcon}>
-                          <Popup>
-                            <div>
-                              <strong>{formVal.address}</strong>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      )}
-                    </MapContainer>
-                  </div>
-                  {!isViewMode && (
-                    <p className='text-xs text-gray-500 mt-1'>Click on the map to set latitude and longitude.</p>
-                  )}
-                </div>
-              </div>
-              <div className='flex justify-end gap-4 mt-4'>
-                {!isViewMode && (
-                  <button
-                    type='submit'
-                    className='text-white bg-[#07163d] hover:bg-[#07163d]/90 focus:ring-4 focus:outline-none focus:ring-[#07163d]/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
-                    Save
-                  </button>
+            </div>
+
+            <div className='mt-4'>
+              <MapContainer
+                center={hasValidCoords ? [Number(formVal.latitude), Number(formVal.longitude)] : [20.5937, 78.9629]}
+                zoom={hasValidCoords ? 15 : 5}
+                style={{ height: '300px', width: '100%' }}>
+                <TileLayer
+                  url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                  attribution='&copy; OpenStreetMap'
+                />
+                <MapClickHandler onMapClick={handleMapClick} disabled={isViewMode} />
+                {hasValidCoords && (
+                  <Marker position={[Number(formVal.latitude), Number(formVal.longitude)]} icon={customIcon}>
+                    <Popup>{formVal.address || 'Location'}</Popup>
+                  </Marker>
                 )}
-                <Link to='/master/employee'>
-                  <button
-                    type='button'
-                    className='text-white bg-gray-500 hover:bg-gray-500/90 focus:ring-4 focus:outline-none focus:ring-gray-500/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
-                    Back
-                  </button>
-                </Link>
-              </div>
+              </MapContainer>
+            </div>
+            <div className='flex justify-end items-end gap-4 mt-40'>
+              <button
+                type='button'
+                className='text-white bg-gray-500 hover:bg-gray-500/90 focus:ring-4 focus:outline-none focus:ring-gray-500/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'
+                onClick={() => navigate(-1)}>
+                Back
+              </button>
+              {!isViewMode && (
+                <button
+                  type='submit'
+                  className='text-white bg-[#07163d] hover:bg-[#07163d]/90 focus:ring-4 focus:outline-none focus:ring-[#07163d]/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
+                  Save
+                </button>
+              )}
             </div>
           </div>
         </div>

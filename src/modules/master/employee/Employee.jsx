@@ -86,18 +86,21 @@ function formatEmp(data, offset = 0) {
     punch_id: emp.punch_id || '',
     email: emp.email || '',
     phone_number: emp.phone_number || '',
-    plant: emp.plant_name || '',
-    department: emp.department_name || '',
+    plant: emp.plant_name || emp.plant?.plant_name || emp.plant || '',
+    department: emp.department_name || emp.department?.department_name || emp.department || '',
     date_of_joining: emp.date_of_joining ? dayjs(emp.date_of_joining).format('YYYY-MM-DD') : '',
     date_of_birth: emp.date_of_birth ? dayjs(emp.date_of_birth).format('YYYY-MM-DD') : '',
     created_at: emp.created_at ? dayjs(emp.created_at).format('YYYY-MM-DD HH:mm') : '',
     gender: emp.gender || '',
     vehicle_route_id: emp.vehicle_route_id || '',
     address: emp.address || '',
-    boarding_latitude: emp.boarding_latitude || '',
-    boarding_longitude: emp.boarding_longitude || '',
+    boarding_latitude: emp.boarding_latitude ?? emp.latitude ?? '',
+    boarding_longitude: emp.boarding_longitude ?? emp.longitude ?? '',
     boarding_address: emp.boarding_address || '',
-    status: emp.active === 1 || emp.status === 'Active' ? 'Active' : 'Inactive',
+    status:
+      emp.active === 1 || (typeof emp.status === 'string' && emp.status.trim().toLowerCase() === 'active')
+        ? 'Active'
+        : 'Inactive',
   }));
 }
 
