@@ -28,27 +28,30 @@ const columns = [
   { key: 'createdAt', header: 'Created At' },
 ];
 
-function formatVehicleRoute(data, offset = 0) {
-  return data.map((d, idx) => {
-    const shiftId = Array.isArray(d.stops) && d.stops.length > 0 ? d.stops[0].shift_id : '-';
-    return {
-      id: offset + idx + 1,
-      routeID: d.id,
-      busNumber: d.vehicle?.vehicle_number || d.vehicle?.vehicle_name || '-',
-      vehicleID: d.vehicle_id,
-      routeName: d.name || '-',
-      shiftId,
-      shift: getShiftName(shiftId),
-      routeStops: d.routes,
-      busDriver: d.vehicle?.driver
-        ? `${d.vehicle.driver.first_name ?? ''} ${d.vehicle.driver.last_name ?? ''}`.trim() || '-'
+const formatVehicleRoute = (data, offset = 0) =>
+  data.map((d, i) => ({
+    id: offset + i + 1,
+    routeID: d.id,
+    busNumber: d.vehicle?.vehicle_number || d.vehicle?.vehicle_name || '-',
+    vehicleID: d.vehicle_id,
+    routeName: d.name || '-',
+    shiftId: d.stops?.[0]?.shift_id || '-',
+    shift: getShiftName(d.stops?.[0]?.shift_id || '-'),
+    routeStops: d.routes || [],
+    busDriver: d.vehicle?.driver
+      ? `${d.vehicle.driver.first_name || ''} ${d.vehicle.driver.last_name || ''}`.trim() || '-'
+      : '-',
+    status:
+      typeof d.status === 'string' && d.status.trim()
+        ? d.status
+        : d.active === 1
+        ? 'Active'
+        : d.active === 0
+        ? 'Inactive'
         : '-',
-      status: typeof d.status === 'string' ? d.status : d.active === 1 ? 'Active' : 'Inactive',
-      createdAt: d.created_at ? dayjs(d.created_at).format('YYYY-MM-DD') : '-',
-      row: d,
-    };
-  });
-}
+    createdAt: d.created_at ? dayjs(d.created_at).format('YYYY-MM-DD') : '-',
+    row: d,
+  }));
 
 function VehicleRoute() {
   const dispatch = useDispatch();

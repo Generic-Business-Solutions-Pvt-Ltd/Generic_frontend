@@ -1,11 +1,14 @@
 import L from 'leaflet';
 import AutoFlyTo from './AutoFly';
 import { APIURL } from '../../../../constants';
-import { useEffect, useState, useRef } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AddressServices, ApiService } from '../../../../services';
+import { FormControlLabel, Radio, Button, IconButton } from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Autocomplete, TextField, FormControl, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import { Autocomplete, TextField, FormControl, RadioGroup } from '@mui/material';
 
 const customIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
@@ -20,12 +23,17 @@ const shifts = [
 
 const FitBounds = ({ stopPoints }) => {
   const map = useMap();
-  const bounds = stopPoints.map((s) => [+s.latitude, +s.longitude]).filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
 
   useEffect(() => {
-    if (bounds.length) map.fitBounds(bounds, { padding: [50, 50] });
-    // eslint-disable-next-line
-  }, [JSON.stringify(bounds), map]);
+    const bounds = stopPoints
+      .filter((s) => s.latitude && s.longitude)
+      .map((s) => [parseFloat(s.latitude), parseFloat(s.longitude)])
+      .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
+
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [stopPoints, map]);
 
   return null;
 };
@@ -42,46 +50,56 @@ const getVehicleNumber = (rowData = {}) => {
 };
 
 const getDriverName = (rowData = {}) => {
-  return rowData.busDriver || rowData.vehicle?.driver || '';
+  const driver = rowData.busDriver || rowData.vehicle?.driver;
+  if (typeof driver === 'string') return driver;
+  if (driver?.first_name || driver?.last_name) {
+    return `${driver.first_name || ''} ${driver.last_name || ''}`.trim();
+  }
+  return '';
 };
 
-const getCreatedAt = (rowData = {}) => rowData.createdAt || rowData.created_at || '';
+const getCreatedAt = (rowData = {}) => {
+  const date = rowData.createdAt || rowData.created_at;
+  if (!date) return '';
+  try {
+    return new Date(date).toLocaleString();
+  } catch {
+    return date;
+  }
+};
+
 const getRouteName = (rowData = {}) => rowData?.routeName || rowData?.name || '';
 const getVehicleId = (rowData = {}) => rowData?.vehicleID || rowData?.vehicle_id || rowData?.vehicle?.id || '';
 
-function toTimeInputValue(val) {
+const toTimeInputValue = (val) => {
   if (!val) return '';
-  // If already in HH:mm, return as is
   if (/^\d{2}:\d{2}$/.test(val)) return val;
-  // If already in HH:mm:ss, return first 5 chars
   if (/^\d{2}:\d{2}:\d{2}/.test(val)) return val.slice(0, 5);
-  // If ISO string, parse and format
   const d = new Date(val);
   if (isNaN(d.getTime())) return '';
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 const VehicleRouteForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const addressTimeoutRef = useRef();
+  const addressTimeoutRefs = useRef({});
 
-  const rowData = location.state?.rowData || {};
+  const rowData = useMemo(() => location.state?.rowData || {}, [location.state?.rowData]);
+
   const companyID = localStorage.getItem('company_id');
   const isViewMode = location.pathname.includes('/view');
-  console.log(rowData);
 
   const [vehicles, setVehicles] = useState([]);
   const [routeName, setRouteName] = useState('');
-  const [addressOnSearch, setAddressOnSearch] = useState([]);
+  const [addressSearchResults, setAddressSearchResults] = useState({});
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [selectedShift, setSelectedShift] = useState(shifts[0].id);
   const [latestSelectedCoords, setLatestSelectedCoords] = useState(null);
   const [stopPoints, setStopPoints] = useState([
-    { id: Date.now(), address: '', latitude: '', longitude: '', time: '', returnTime: '', distance: 0 },
+    { id: Date.now(), address: '', latitude: '', longitude: '', time: '', returnTime: '', distance: '' },
   ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -104,13 +122,13 @@ const VehicleRouteForm = () => {
         if (res?.data?.stops?.length) {
           setStopPoints(
             res.data.stops.map((s) => ({
-              id: s.id,
+              id: s.id || Date.now() + Math.random(),
               address: s.address || '',
               latitude: s.latitude || '',
               longitude: s.longitude || '',
-              time: toTimeInputValue(s.time || ''),
-              returnTime: toTimeInputValue(s.return_time || ''),
-              distance: s.distance || 0,
+              time: toTimeInputValue(s.time),
+              returnTime: toTimeInputValue(s.return_time),
+              distance: s.distance || '',
             }))
           );
         }
@@ -123,118 +141,189 @@ const VehicleRouteForm = () => {
   }, [rowData?.id]);
 
   useEffect(() => {
-    if (!rowData) return;
+    if (!rowData || !vehicles.length) return;
+
     const vehicleId = getVehicleId(rowData);
-    if (vehicleId && vehicles.length > 0) {
+    if (vehicleId) {
       const foundVehicle = vehicles.find((v) => v.id === vehicleId);
       if (foundVehicle) {
         setSelectedVehicle({
           value: foundVehicle.id,
-          label:
-            foundVehicle.vehicle?.vehicle_number ||
-            foundVehicle.vehicle_number ||
-            foundVehicle.vehicle_name ||
-            foundVehicle.label ||
-            '',
+          label: foundVehicle.vehicle?.vehicle_number || foundVehicle.vehicle_number || foundVehicle.vehicle_name || '',
         });
       }
     }
+
     setRouteName(getRouteName(rowData));
+    setSelectedShift(rowData.shiftId || rowData.shift_id || rowData.stops?.[0]?.shift_id || shifts[0].id);
 
-    setSelectedShift(
-      rowData.shiftId || rowData.shift_id || (rowData.stops && rowData.stops[0]?.shift_id) || shifts[0].id
-    );
-
-    if (Array.isArray(rowData.Vehicle_Route_Stops) && rowData.Vehicle_Route_Stops.length > 0) {
-      setStopPoints(
-        rowData.Vehicle_Route_Stops.map((s) => ({
-          id: s.id || Date.now() + Math.random(),
-          address: s.address || '',
-          latitude: s.latitude || '',
-          longitude: s.longitude || '',
-          time: toTimeInputValue(s.time || ''),
-          returnTime: toTimeInputValue(s.return_time || ''),
-          distance: s.distance || 0,
-        }))
-      );
-    } else if (
-      Array.isArray(rowData.stops) &&
-      rowData.stops.length > 0 &&
-      (rowData.stops[0].address || rowData.stops[0].latitude)
-    ) {
-      setStopPoints(
-        rowData.stops.map((s) => ({
-          id: s.id || Date.now() + Math.random(),
-          address: s.address || '',
-          latitude: s.latitude || '',
-          longitude: s.longitude || '',
-          time: toTimeInputValue(s.time || ''),
-          returnTime: toTimeInputValue(s.return_time || ''),
-          distance: s.distance || 0,
-        }))
-      );
+    const stopsData = rowData.Vehicle_Route_Stops || rowData.stops;
+    if (Array.isArray(stopsData) && stopsData.length > 0) {
+      const hasValidStops = stopsData.some((s) => s.address || s.latitude);
+      if (hasValidStops) {
+        setStopPoints(
+          stopsData.map((s) => ({
+            id: s.id || Date.now() + Math.random(),
+            address: s.address || '',
+            latitude: s.latitude || '',
+            longitude: s.longitude || '',
+            time: toTimeInputValue(s.time),
+            returnTime: toTimeInputValue(s.return_time),
+            distance: s.distance || '',
+          }))
+        );
+      }
     }
-    // eslint-disable-next-line
-  }, [JSON.stringify(rowData), JSON.stringify(vehicles)]);
+  }, [rowData, vehicles]);
 
   const handleStopChange = (idx, key, value) => {
     setStopPoints((prevStops) => {
       const newStops = [...prevStops];
-      if (key === 'time' || key === 'returnTime') {
-        if (typeof value === 'string' && value.length > 5) value = value.slice(0, 5);
-      }
       newStops[idx] = { ...newStops[idx], [key]: value };
-      if (
-        ['latitude', 'longitude'].includes(key) &&
-        !isNaN(+newStops[idx].latitude) &&
-        !isNaN(+newStops[idx].longitude)
-      ) {
-        setLatestSelectedCoords({ lat: +newStops[idx].latitude, lng: +newStops[idx].longitude });
+
+      if (key === 'latitude' || key === 'longitude') {
+        const lat = parseFloat(newStops[idx].latitude);
+        const lng = parseFloat(newStops[idx].longitude);
+        if (!isNaN(lat) && !isNaN(lng)) setLatestSelectedCoords({ lat, lng });
       }
+
       return newStops;
     });
   };
 
+  const handleAddressSearch = async (idx, value) => {
+    if (addressTimeoutRefs.current[idx]) clearTimeout(addressTimeoutRefs.current[idx]);
+
+    if (!value || value.trim() === '') {
+      setAddressSearchResults((prev) => ({ ...prev, [idx]: [] }));
+      return;
+    }
+
+    addressTimeoutRefs.current[idx] = setTimeout(async () => {
+      try {
+        const res = await AddressServices.searchAddress(value);
+        setAddressSearchResults((prev) => ({ ...prev, [idx]: Array.isArray(res?.data) ? res.data : [] }));
+      } catch (error) {
+        console.error('Address search failed:', error);
+        setAddressSearchResults((prev) => ({ ...prev, [idx]: [] }));
+      }
+    }, 500);
+  };
+
+  const handleAddressSelect = (idx, selectedOption) => {
+    if (!selectedOption) {
+      handleStopChange(idx, 'address', '');
+      return;
+    }
+
+    if (typeof selectedOption === 'string') {
+      handleStopChange(idx, 'address', selectedOption);
+    } else if (selectedOption.otherData) {
+      handleStopChange(idx, 'address', selectedOption.label);
+      handleStopChange(idx, 'latitude', selectedOption.otherData.lat);
+      handleStopChange(idx, 'longitude', selectedOption.otherData.lon);
+    } else {
+      handleStopChange(idx, 'address', selectedOption.label);
+    }
+  };
+
+  const validateForm = () => {
+    if (!selectedVehicle?.value) {
+      alert('Please select a vehicle');
+      return false;
+    }
+
+    if (!routeName.trim()) {
+      alert('Please enter a route name');
+      return false;
+    }
+
+    if (stopPoints.length === 0) {
+      alert('Please add at least one stop');
+      return false;
+    }
+
+    const invalidStops = stopPoints.filter(
+      (s) => !s.latitude || !s.longitude || isNaN(parseFloat(s.latitude)) || isNaN(parseFloat(s.longitude))
+    );
+
+    if (invalidStops.length > 0) {
+      alert('All stops must have valid latitude and longitude values');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
     const payload = {
       company_id: companyID,
-      vehicle_id: selectedVehicle?.value,
-      name: routeName,
+      vehicle_id: selectedVehicle.value,
+      name: routeName.trim(),
       status_id: 1,
       shift_id: selectedShift,
       Vehicle_Route_Stops: stopPoints.map((s) => ({
         company_id: companyID,
         shift_id: selectedShift,
-        latitude: s.latitude,
-        longitude: s.longitude,
-        address: s.address,
-        time: s.time ? s.time : '',
-        return_time: s.returnTime ? s.returnTime : '',
-        distance: s.distance,
+        latitude: parseFloat(s.latitude).toString(),
+        longitude: parseFloat(s.longitude).toString(),
+        address: s.address.trim(),
+        time: s.time || '',
+        return_time: s.returnTime || '',
+        distance: s.distance ? parseFloat(s.distance).toString() : '0',
       })),
     };
+
+    console.log('Submitting payload:', JSON.stringify(payload, null, 2));
 
     try {
       const id = rowData?.routeID || rowData?.id;
       let res;
-      if (rowData?.id) {
+
+      if (id) {
         res = await ApiService.put(`${APIURL.VEHICLE_ROUTE}/${id}?company_id=${companyID}`, payload);
         if (res.success) {
           alert('Route updated successfully!');
           navigate('/management/vehicle-route');
+        } else {
+          throw new Error(res.message || 'Update failed');
         }
       } else {
         res = await ApiService.post(APIURL.VEHICLE_ROUTE, payload);
         if (res.success) {
           alert('Route created successfully!');
           navigate('/management/vehicle-route');
+        } else {
+          throw new Error(res.message || 'Creation failed');
         }
       }
     } catch (error) {
-      console.error(error);
-      alert('Something went wrong!');
+      console.error('Submit error:', error);
+      alert(error.message || 'Something went wrong! Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const addStop = () => {
+    setStopPoints((prev) => [
+      ...prev,
+      { id: Date.now(), address: '', latitude: '', longitude: '', time: '', returnTime: '', distance: '' },
+    ]);
+  };
+
+  const removeStop = (idx) => {
+    if (stopPoints.length <= 1) {
+      alert('At least one stop is required');
+      return;
+    }
+    setStopPoints((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const vehicleOptions = vehicles.map((v) => ({
@@ -244,261 +333,325 @@ const VehicleRouteForm = () => {
       v.vehicle_number ||
       v.vehicle_name ||
       v.busNumber ||
-      v.label,
+      'Unknown Vehicle',
     value: v.id,
   }));
 
   const initialCenter =
-    stopPoints.length && !isNaN(+stopPoints[0]?.latitude) && !isNaN(+stopPoints[0]?.longitude)
-      ? [+stopPoints[0].latitude, +stopPoints[0].longitude]
-      : [12.932, 12.932];
-
-  const addressOptions = Array.isArray(addressOnSearch) ? addressOnSearch : addressOnSearch ? [addressOnSearch] : [];
+    stopPoints.length && stopPoints[0]?.latitude && stopPoints[0]?.longitude
+      ? [parseFloat(stopPoints[0].latitude), parseFloat(stopPoints[0].longitude)]
+      : [22.71, 75.85];
 
   return (
-    <div>
-      <div className='flex justify-between items-center p-2'>
-        <h1 className='text-2xl font-bold mb-3 text-[#07163d]'>Vehicle Route</h1>
+    <div className='p-4'>
+      <div className='flex justify-between items-center mb-4'>
+        <h1 className='text-2xl font-bold text-[#07163d]'>
+          {isViewMode ? 'View Vehicle Route' : rowData?.id ? 'Edit Vehicle Route' : 'Create Vehicle Route'}
+        </h1>
+        {isViewMode && (
+          <Button
+            variant='contained'
+            onClick={() => navigate('/management/vehicle-route/edit', { state: { rowData } })}>
+            Edit Route
+          </Button>
+        )}
       </div>
-      <form onSubmit={handleFormSubmit} className='grid gap-3'>
-        <div className='bg-white p-4 border-t-3 border-[#07163d] rounded-sm'>
-          <div className='grid md:grid-cols-2 gap-3 my-2'>
-            {isViewMode ? (
-              <>
-                <div className='flex flex-col'>
-                  <label className='block mb-2 text-sm font-semibold text-gray-900'>Vehicle</label>
-                  <TextField size='small' type='text' value={getVehicleNumber(rowData)} disabled fullWidth />
-                </div>
-                <div className='flex flex-col'>
-                  <label className='block mb-2 text-sm font-semibold text-gray-900'>Route Name</label>
-                  <TextField size='small' type='text' value={getRouteName(rowData)} disabled fullWidth />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className='flex flex-col'>
-                  <label className='block mb-2 text-sm font-semibold text-gray-900'>Vehicle</label>
-                  <Autocomplete
-                    disablePortal
-                    options={vehicleOptions}
-                    value={
-                      selectedVehicle
-                        ? vehicleOptions.find((o) => o.value === selectedVehicle.value) || selectedVehicle
-                        : null
-                    }
-                    isOptionEqualToValue={(o, v) => o.value === v?.value}
-                    getOptionLabel={(o) => o?.label || ''}
-                    size='small'
-                    renderInput={(params) => <TextField {...params} placeholder='Select Vehicle' />}
-                    onChange={(_, v) => setSelectedVehicle(v)}
-                  />
-                </div>
-                <div className='flex flex-col'>
-                  <label className='block mb-2 text-sm font-semibold text-gray-900'>Route Name</label>
-                  <TextField
-                    size='small'
-                    type='text'
-                    placeholder='Type Route Name Here'
-                    fullWidth
-                    value={routeName}
-                    onChange={(e) => setRouteName(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
+
+      <form onSubmit={handleFormSubmit} className='space-y-4'>
+        {/* Basic Information Section */}
+        <div className='bg-white p-4 border-t-4 border-[#07163d] rounded-lg shadow-sm'>
+          <h2 className='text-lg font-semibold mb-4 text-gray-800'>Route Information</h2>
+
+          <div className='grid md:grid-cols-2 gap-4'>
+            <div>
+              <label className='block mb-2 text-sm font-semibold text-gray-900'>Vehicle *</label>
+              {isViewMode ? (
+                <TextField size='small' value={getVehicleNumber(rowData)} disabled fullWidth />
+              ) : (
+                <Autocomplete
+                  disablePortal
+                  options={vehicleOptions}
+                  value={selectedVehicle}
+                  isOptionEqualToValue={(o, v) => o.value === v?.value}
+                  getOptionLabel={(o) => o?.label || ''}
+                  size='small'
+                  renderInput={(params) => <TextField {...params} placeholder='Select Vehicle' required />}
+                  onChange={(_, v) => setSelectedVehicle(v)}
+                />
+              )}
+            </div>
+
+            <div>
+              <label className='block mb-2 text-sm font-semibold text-gray-900'>Route Name *</label>
+              {isViewMode ? (
+                <TextField size='small' value={getRouteName(rowData)} disabled fullWidth />
+              ) : (
+                <TextField
+                  size='small'
+                  placeholder='Enter route name'
+                  fullWidth
+                  required
+                  value={routeName}
+                  onChange={(e) => setRouteName(e.target.value)}
+                />
+              )}
+            </div>
           </div>
-          {isViewMode && rowData && (
-            <div className='col-span-2 py-2 grid grid-cols-4 gap-4 mt-2'>
+
+          {isViewMode && (
+            <div className='grid md:grid-cols-4 gap-4 mt-4 pt-4 border-t'>
               <div>
-                <b>Route Name:</b> {getRouteName(rowData)}
+                <p className='text-xs text-gray-600 mb-1'>Route Name</p>
+                <p className='font-medium'>{getRouteName(rowData)}</p>
               </div>
               <div>
-                <b>Vehicle Number:</b> {getVehicleNumber(rowData)}
+                <p className='text-xs text-gray-600 mb-1'>Vehicle Number</p>
+                <p className='font-medium'>{getVehicleNumber(rowData)}</p>
               </div>
               <div>
-                <b>Driver:</b> {getDriverName(rowData)}
+                <p className='text-xs text-gray-600 mb-1'>Driver</p>
+                <p className='font-medium'>{getDriverName(rowData) || 'N/A'}</p>
               </div>
               <div>
-                <b>Created At:</b> {getCreatedAt(rowData)}
+                <p className='text-xs text-gray-600 mb-1'>Created At</p>
+                <p className='font-medium'>{getCreatedAt(rowData) || 'N/A'}</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className='bg-white p-4 rounded-sm border-t-3 border-[#07163d]'>
-          {isViewMode ? (
-            <div className='mb-4'>
-              <label className='block mb-2 text-sm font-semibold text-gray-900'>Shift</label>
+        {/* Stops Section */}
+        <div className='bg-white p-4 rounded-lg border-t-4 border-[#07163d] shadow-sm'>
+          <h2 className='text-lg font-semibold mb-4 text-gray-800'>Route Stops</h2>
+
+          {/* Shift Selection */}
+          <div className='mb-4'>
+            <label className='block mb-2 text-sm font-semibold text-gray-900'>Shift *</label>
+            {isViewMode ? (
               <TextField
                 size='small'
-                type='text'
-                value={shifts.find((s) => String(s.id) === String(selectedShift))?.name || shifts[0].name}
+                value={shifts.find((s) => String(s.id) === String(selectedShift))?.name || ''}
                 disabled
                 fullWidth
               />
-            </div>
-          ) : (
-            <FormControl component='fieldset'>
-              <label className='block mb-2 text-sm font-semibold text-gray-900'>Select Shift *</label>
-              <RadioGroup row value={String(selectedShift)} onChange={(e) => setSelectedShift(e.target.value)}>
-                {shifts.map((s) => (
-                  <FormControlLabel
-                    key={s.id}
-                    value={String(s.id)}
-                    control={<Radio />}
-                    label={<span className='text-sm font-medium'>{s.name}</span>}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
-          )}
+            ) : (
+              <FormControl component='fieldset'>
+                <RadioGroup row value={String(selectedShift)} onChange={(e) => setSelectedShift(e.target.value)}>
+                  {shifts.map((s) => (
+                    <FormControlLabel
+                      key={s.id}
+                      value={String(s.id)}
+                      control={<Radio />}
+                      label={<span className='text-sm font-medium'>{s.name}</span>}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            )}
+          </div>
 
-          {stopPoints.map((stop, idx) => (
-            <div key={stop.id} className='grid grid-cols-8 gap-2 items-center my-3 w-full'>
-              <div className='flex flex-col col-span-2'>
-                <label className='block mb-2 text-sm font-semibold text-gray-900'>Address</label>
-                {isViewMode ? (
-                  <TextField size='small' type='text' value={stop.address} disabled fullWidth />
-                ) : (
-                  <Autocomplete
-                    freeSolo
-                    disablePortal
-                    options={addressOptions.map((i) => ({
-                      label: i.display_name,
-                      value: i.place_id,
-                      otherData: i,
-                    }))}
-                    getOptionLabel={(o) => (typeof o === 'string' ? o : o?.label || '')}
-                    size='small'
-                    value={
-                      addressOptions.find((opt) => opt.display_name === stop.address)
-                        ? { label: stop.address }
-                        : stop.address || ''
-                    }
-                    renderInput={(params) => <TextField {...params} placeholder='Search Address' />}
-                    onInputChange={(e, value, reason) => {
-                      if (reason === 'input') {
-                        if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
-                        addressTimeoutRef.current = setTimeout(async () => {
-                          if (!value) return setAddressOnSearch([]);
-                          try {
-                            const res = await AddressServices.searchAddress(value);
-                            setAddressOnSearch(res.data || []);
-                          } catch (error) {
-                            console.error('Address search failed:', error);
-                          }
-                        }, 500);
-                      }
-                    }}
-                    onChange={(_, value) => {
-                      if (!value) return;
-                      if (typeof value === 'string') {
-                        handleStopChange(idx, 'address', value);
-                      } else {
-                        handleStopChange(idx, 'address', value.label || '');
-                        if (value.otherData) {
-                          handleStopChange(idx, 'latitude', value.otherData.lat);
-                          handleStopChange(idx, 'longitude', value.otherData.lon);
+          {/* Stops List - now all fields in single row */}
+          <div className='space-y-4 overflow-x-auto'>
+            <div className='hidden md:grid md:grid-cols-7 gap-3 px-2 pb-1 border-b text-xs text-gray-600 font-bold'>
+              <div>Address</div>
+              <div>Latitude *</div>
+              <div>Longitude *</div>
+              <div>Pickup Time</div>
+              <div>Return Time</div>
+              <div>Distance (km)</div>
+              <div className='flex justify-end'>&nbsp;</div>
+            </div>
+            {stopPoints.map((stop, idx) => (
+              <div
+                key={stop.id}
+                className='flex flex-col md:grid md:grid-cols-7 gap-3 bg-gray-50 border rounded-lg p-2 items-center'>
+                {/* Address */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Address</label>
+                  {isViewMode ? (
+                    <TextField size='small' value={stop.address} disabled fullWidth />
+                  ) : (
+                    <Autocomplete
+                      freeSolo
+                      disablePortal
+                      options={(addressSearchResults[idx] || []).map((i) => ({
+                        label: i.display_name,
+                        value: i.place_id,
+                        otherData: i,
+                      }))}
+                      getOptionLabel={(o) => (typeof o === 'string' ? o : o?.label || '')}
+                      size='small'
+                      value={stop.address}
+                      inputValue={stop.address}
+                      renderInput={(params) => <TextField {...params} placeholder='Search or enter address' />}
+                      onInputChange={(_, value, reason) => {
+                        if (reason === 'input') {
+                          handleStopChange(idx, 'address', value);
+                          handleAddressSearch(idx, value);
+                        } else if (reason === 'clear') {
+                          handleStopChange(idx, 'address', '');
                         }
-                      }
-                    }}
+                      }}
+                      onChange={(_, value) => handleAddressSelect(idx, value)}
+                    />
+                  )}
+                </div>
+                {/* Latitude */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Latitude *</label>
+                  <TextField
+                    size='small'
+                    type='number'
+                    placeholder='22.7196'
+                    value={stop.latitude}
+                    disabled={isViewMode}
+                    required
+                    fullWidth
+                    inputProps={{ step: 'any' }}
+                    onChange={(e) => handleStopChange(idx, 'latitude', e.target.value)}
                   />
-                )}
+                </div>
+                {/* Longitude */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Longitude *</label>
+                  <TextField
+                    size='small'
+                    type='number'
+                    placeholder='75.8577'
+                    value={stop.longitude}
+                    disabled={isViewMode}
+                    required
+                    fullWidth
+                    inputProps={{ step: 'any' }}
+                    onChange={(e) => handleStopChange(idx, 'longitude', e.target.value)}
+                  />
+                </div>
+                {/* Pickup Time */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Pickup Time</label>
+                  <TextField
+                    size='small'
+                    type='time'
+                    value={stop.time}
+                    disabled={isViewMode}
+                    fullWidth
+                    inputProps={{ step: 60 }}
+                    onChange={(e) => handleStopChange(idx, 'time', e.target.value)}
+                  />
+                </div>
+                {/* Return Time */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Return Time</label>
+                  <TextField
+                    size='small'
+                    type='time'
+                    value={stop.returnTime}
+                    disabled={isViewMode}
+                    fullWidth
+                    inputProps={{ step: 60 }}
+                    onChange={(e) => handleStopChange(idx, 'returnTime', e.target.value)}
+                  />
+                </div>
+                {/* Distance */}
+                <div className='w-full'>
+                  <label className='md:hidden block mb-1 text-xs font-semibold text-gray-700'>Distance (km)</label>
+                  <TextField
+                    size='small'
+                    type='number'
+                    placeholder='0'
+                    value={stop.distance}
+                    disabled={isViewMode}
+                    fullWidth
+                    inputProps={{ step: 'any', min: 0 }}
+                    onChange={(e) => handleStopChange(idx, 'distance', e.target.value)}
+                  />
+                </div>
+                {/* Remove Button */}
+                <div className='flex items-center justify-end w-full h-full mt-2 md:mt-0'>
+                  <div className='flex gap-2 items-center'>
+                    <span className='md:hidden font-semibold'>Stop {idx + 1}</span>
+                    {!isViewMode && stopPoints.length > 1 && (
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => removeStop(idx)}
+                        aria-label='delete stop'
+                        variant='outlined'
+                        startIcon={<DeleteIcon />}
+                        style={{ borderRadius: 0 }}>
+                        Remove
+                      </Button>
+                    )}
+                    {isViewMode && <span className='hidden md:block text-xs text-gray-500 p-2'>Stop {idx + 1}</span>}
+                  </div>
+                </div>
               </div>
-
-              <TextField
-                label='Latitude'
-                size='small'
-                type='number'
-                value={stop.latitude}
-                disabled={isViewMode}
-                onChange={(e) => handleStopChange(idx, 'latitude', e.target.value)}
-              />
-
-              <TextField
-                label='Longitude'
-                size='small'
-                type='number'
-                value={stop.longitude}
-                disabled={isViewMode}
-                onChange={(e) => handleStopChange(idx, 'longitude', e.target.value)}
-              />
-
-              <TextField
-                label='Time'
-                size='small'
-                type='time'
-                value={toTimeInputValue(stop.time)}
-                disabled={isViewMode}
-                onChange={(e) => handleStopChange(idx, 'time', e.target.value)}
-                inputProps={{ step: 60 }}
-              />
-
-              <TextField
-                label='Return Time'
-                size='small'
-                type='time'
-                value={toTimeInputValue(stop.returnTime)}
-                disabled={isViewMode}
-                onChange={(e) => handleStopChange(idx, 'returnTime', e.target.value)}
-                inputProps={{ step: 60 }}
-              />
-
-              <TextField
-                label='Distance'
-                size='small'
-                type='number'
-                value={stop.distance}
-                disabled={isViewMode}
-                onChange={(e) => handleStopChange(idx, 'distance', e.target.value)}
-              />
-
-              {!isViewMode && stopPoints.length > 1 && (
-                <button
-                  type='button'
-                  className='bg-red-500 text-white p-1 rounded'
-                  onClick={() => setStopPoints((prev) => prev.filter((_, i) => i !== idx))}>
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
 
           {!isViewMode && (
-            <button
-              type='button'
-              className='bg-green-500 text-white px-4 py-2 rounded mt-2'
-              onClick={() =>
-                setStopPoints((prev) => [
-                  ...prev,
-                  { id: Date.now(), address: '', latitude: '', longitude: '', time: '', returnTime: '', distance: 0 },
-                ])
-              }>
+            <Button variant='outlined' startIcon={<AddIcon />} onClick={addStop} sx={{ mt: 2 }}>
               Add Stop
-            </button>
+            </Button>
           )}
         </div>
 
-        <div className='h-[400px] w-full my-3 rounded-sm overflow-hidden'>
-          <MapContainer center={initialCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' />
-            {stopPoints.map((s) =>
-              s.latitude && s.longitude ? (
-                <Marker key={s.id} position={[+s.latitude, +s.longitude]} icon={customIcon}>
-                  <Popup>{s.address}</Popup>
-                </Marker>
-              ) : null
-            )}
-            <FitBounds stopPoints={stopPoints} />
-            {latestSelectedCoords && <AutoFlyTo coords={latestSelectedCoords} />}
-          </MapContainer>
-        </div>
+        {/* Map Section */}
+        <div className='bg-white p-4 rounded-lg border-t-4 border-[#07163d] shadow-sm'>
+          <h2 className='text-lg font-semibold mb-4 text-gray-800'>Route Map</h2>
+          <div className='h-[400px] w-full rounded-lg overflow-hidden border'>
+            <MapContainer center={initialCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+              <TileLayer url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' />
+              {stopPoints.map((s, idx) =>
+                s.latitude && s.longitude && !isNaN(parseFloat(s.latitude)) && !isNaN(parseFloat(s.longitude)) ? (
+                  <Marker key={s.id} position={[parseFloat(s.latitude), parseFloat(s.longitude)]} icon={customIcon}>
+                    <Popup>
+                      <div>
+                        <strong>Stop {idx + 1}</strong>
+                        {s.address && <p className='text-sm mt-1'>{s.address}</p>}
+                        <p className='text-xs text-gray-600 mt-1'>
+                          {parseFloat(s.latitude).toFixed(6)}, {parseFloat(s.longitude).toFixed(6)}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ) : null
+              )}
+              <FitBounds stopPoints={stopPoints} />
+              {latestSelectedCoords && <AutoFlyTo coords={latestSelectedCoords} />}
+            </MapContainer>
+          </div>
 
-        {!isViewMode && (
-          <button type='submit' className='bg-[#07163d] text-white py-2 px-4 rounded hover:opacity-90'>
-            {rowData?.id ? 'Update Route' : 'Create Route'}
-          </button>
-        )}
+          {/* Submit Button */}
+          {!isViewMode && (
+            <div className='w-full flex gap-3 mt-4'>
+              <div className='w-1/2'>
+                <Button
+                  type='button'
+                  variant='outlined'
+                  onClick={() => navigate('/management/vehicle-route')}
+                  disabled={isSubmitting}
+                  sx={{ py: 2, width: '100%' }}>
+                  Cancel
+                </Button>
+              </div>
+              <div className='w-1/2'>
+                <Button
+                  type='submit'
+                  variant='contained'
+                  disabled={isSubmitting}
+                  sx={{
+                    backgroundColor: '#07163d',
+                    '&:hover': { backgroundColor: '#0a1f5c' },
+                    py: 2,
+                    width: '100%',
+                  }}>
+                  {isSubmitting ? 'Saving...' : rowData?.id ? 'Update Route' : 'Create Route'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );

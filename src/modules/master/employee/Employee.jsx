@@ -127,6 +127,15 @@ function Employee() {
     dispatch(fetchDepartments({ limit: 10 }));
   }, [dispatch]);
 
+  const [allEmployeeOptions, setAllEmployeeOptions] = useState([]);
+  useEffect(() => {
+    if (company_id)
+      dispatch(fetchEmployees({ company_id, department: filterData.department, limit: 3000, page: 1 })).then((res) =>
+        setAllEmployeeOptions(res?.payload?.employes || [])
+      );
+    // eslint-disable-next-line
+  }, [dispatch, company_id, filterData.department]);
+
   useEffect(() => {
     if (company_id) {
       dispatch(fetchEmployees(buildApiPayload())).then((res) => {
@@ -160,6 +169,7 @@ function Employee() {
       if (res.success) {
         toast.success('Employee deleted successfully!');
         dispatch(fetchEmployees(buildApiPayload()));
+        window.location.reload();
       } else toast.error(res.message || 'Failed to delete Employee');
     } catch {
       toast.error('Delete failed.');
@@ -305,7 +315,7 @@ function Employee() {
           fileInputRef={fileInputRef}
           setFile={setFile}
           departments={departments}
-          employees={employees?.employes}
+          employees={allEmployeeOptions}
           isDate={false}
         />
       </form>
