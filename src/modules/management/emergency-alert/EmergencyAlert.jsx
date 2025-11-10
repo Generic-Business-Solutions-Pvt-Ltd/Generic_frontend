@@ -224,6 +224,7 @@ function EmergencyAlert() {
         toast.success('Alert deleted successfully!');
         if (filteredData.length === 1 && page > 0) setPage(page - 1);
         else fetchAlerts();
+        window.location.reload();
       } else {
         toast.error('Failed to delete alert.');
       }

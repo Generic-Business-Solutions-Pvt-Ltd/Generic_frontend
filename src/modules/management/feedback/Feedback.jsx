@@ -101,9 +101,8 @@ function Feedback() {
       if (res.success) {
         toast.success('Feedback deleted successfully!');
         await fetchFeedbacks();
-        if (filteredData.length === 1 && page > 0) {
-          setPage(page - 1);
-        }
+        if (filteredData.length === 1 && page > 0) setPage(page - 1);
+        window.location.reload();
       } else {
         toast.error('Failed to delete this Feedback.');
       }

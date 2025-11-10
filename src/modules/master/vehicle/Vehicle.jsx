@@ -117,6 +117,7 @@ function Vehicle() {
       if (res.success) {
         toast.success('Vehicle deleted successfully!');
         dispatch(fetchVehicles(buildApiPayload()));
+        window.location.reload();
       } else {
         toast.error(res.message || 'Failed to delete vehicle');
       }

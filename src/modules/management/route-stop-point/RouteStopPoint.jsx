@@ -20,7 +20,10 @@ function RouteStopPoint() {
     navigate('/management/vehicle-stop-point/create', { state: row, action: 'EDIT' });
   };
 
-  const handleDelete = (row) => alert(`Deleting ${row.name}`);
+  const handleDelete = (row) => {
+    alert(`Deleting ${row.name}`);
+    window.location.reload();
+  };
 
   return (
     <div>

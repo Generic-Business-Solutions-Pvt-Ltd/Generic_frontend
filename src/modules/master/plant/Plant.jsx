@@ -72,10 +72,9 @@ function Plant() {
         dispatch(fetchPlants(buildApiPayload()))
           .unwrap()
           .then((data) => {
-            if (data.plants.length === 0 && page > 0) {
-              setPage(page - 1);
-            }
+            if (data.plants.length === 0 && page > 0) setPage(page - 1);
           });
+        window.location.reload();
       } else {
         toast.error('Failed to delete plant');
       }

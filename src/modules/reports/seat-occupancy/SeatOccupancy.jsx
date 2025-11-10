@@ -9,17 +9,17 @@ import { fetchVehicleRoutes } from '../../../redux/vehicleRouteSlice';
 import { exportToExcel, exportToPDF, buildExportRows } from '../../../utils/exportUtils';
 
 const columns = [
-  { key: 'date', header: 'Date', render: (value) => (value ? moment(value).format('YYYY-MM-DD') : '-') },
-  { key: 'vehicleNo', header: 'Vehicle Number', render: (v, row) => row?.vehicleNo || '-' },
-  { key: 'routeName', header: 'Route Detail', render: (v, row) => row?.routeName || '-' },
-  { key: 'driverName', header: 'Driver Name', render: (v, row) => row?.driverName || '-' },
-  { key: 'driverNumber', header: 'Driver Number', render: (v, row) => row?.driverNumber || '-' },
-  { key: 'totalSeats', header: 'Total Seats', render: (v, row) => row?.totalSeats ?? '-' },
-  { key: 'totalOccupied', header: 'Occupied', render: (v, row) => row?.totalOccupied ?? '-' },
+  { key: 'date', header: 'Date', render: (v) => (v ? moment(v).format('YYYY-MM-DD') : '-') },
+  { key: 'vehicle_number', header: 'Vehicle Number', render: (v) => v || '-' },
+  { key: 'route_detail', header: 'Route Detail', render: (v) => v || '-' },
+  { key: 'driver_name', header: 'Driver Name', render: (v) => v || '-' },
+  { key: 'driver_number', header: 'Driver Number', render: (v) => v || '-' },
+  { key: 'total_seats', header: 'Total Seats', render: (v) => (v != null ? v : '-') },
+  { key: 'occupied', header: 'Occupied', render: (v) => v ?? '-' },
   {
-    key: 'totalOccupancyRate',
+    key: 'occupancy_rate',
     header: 'Occupancy Rate',
-    render: (v, row) => (typeof row?.totalOccupancyRate === 'number' ? `${row.totalOccupancyRate}%` : '-'),
+    render: (v) => (v ? `${v}${typeof v === 'number' ? '%' : ''}` : '-'),
   },
 ];
 
@@ -39,10 +39,12 @@ function SeatOccupancy() {
   }, [dispatch, company_id]);
 
   useEffect(() => {
-    if (company_id)
+    if (company_id) {
       dispatch(fetchSeatOccupancyReport({ company_id, page: page + 1, limit })).then((res) => {
-        if (res?.payload?.status === 200) setFilteredData(Array.isArray(res?.payload?.data) ? res.payload.data : []);
+        if (res?.payload?.success)
+          setFilteredData(Array.isArray(res.payload.data?.reports) ? res.payload.data.reports : []);
       });
+    }
   }, [dispatch, company_id, page, limit]);
 
   const buildApiPayload = () => {
@@ -74,9 +76,9 @@ function SeatOccupancy() {
   const handleFormSubmit = (e) => {
     e.preventDefault();
     dispatch(fetchSeatOccupancyReport(buildApiPayload())).then((res) => {
-      if (res?.payload?.status === 200) {
+      if (res?.payload?.success) {
         toast.success(res?.payload?.message);
-        setFilteredData(Array.isArray(res?.payload?.data) ? res.payload.data : []);
+        setFilteredData(Array.isArray(res?.payload?.data?.reports) ? res.payload.data.reports : []);
       } else {
         toast.error(res?.payload?.message);
       }
@@ -88,32 +90,15 @@ function SeatOccupancy() {
   };
 
   const tableData = Array.isArray(filteredData)
-    ? filteredData.map((item) => {
-        const totalAssigned =
-          typeof item.totalAssigned === 'number' && item.totalAssigned > 0
-            ? item.totalAssigned
-            : item.vehicle?.total_seats;
-        const totalOccupied = typeof item.totalOccupied === 'number' ? item.totalOccupied : 0;
-        return {
-          date: item.date ? moment(item.date).format('YYYY-MM-DD') : '-',
-          vehicleNo: item.vehicle?.vehicle_number || '-',
-          routeName: item.vehicle?.Vehicle_Route?.[0]?.name || '-',
-          driverName:
-            `${item.vehicle?.vehicle_driver?.first_name || ''} ${
-              item.vehicle?.vehicle_driver?.last_name || ''
-            }`.trim() || '-',
-          driverNumber: item.vehicle?.vehicle_driver?.phone_number || '-',
-          totalSeats: item.vehicle?.total_seats ?? '-',
-          totalOccupied: typeof item.totalOccupied === 'number' ? item.totalOccupied : '-',
-          totalOccupancyRate:
-            typeof totalAssigned === 'number' && totalAssigned > 0 && typeof totalOccupied === 'number'
-              ? Math.round((totalOccupied / totalAssigned) * 100)
-              : 0,
-        };
-      })
+    ? filteredData.map((item) => ({ ...item, date: item.date ? moment(item.date).format('YYYY-MM-DD') : '-' }))
     : [];
 
-  const totalCount = seatOccupancyReportData?.pagination?.total || filteredData.length;
+  const totalCount =
+    seatOccupancyReportData?.payload?.data?.pagination?.total ||
+    seatOccupancyReportData?.data?.pagination?.total ||
+    seatOccupancyReportData?.pagination?.total ||
+    (seatOccupancyReportData && seatOccupancyReportData.pagination && seatOccupancyReportData.pagination.total) ||
+    filteredData.length;
 
   return (
     <div className='w-full h-full p-2'>

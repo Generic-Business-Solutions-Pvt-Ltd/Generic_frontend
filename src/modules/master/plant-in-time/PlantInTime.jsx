@@ -100,9 +100,8 @@ function PlantInTime() {
       if (response.success) {
         toast.success('Plant in Time deleted successfully!');
         await fetchData();
-        if (filteredData.length === 1 && page > 0) {
-          setPage(page - 1);
-        }
+        if (filteredData.length === 1 && page > 0) setPage(page - 1);
+        window.location.reload();
       } else {
         toast.error('Failed to delete Plant in Time.');
       }

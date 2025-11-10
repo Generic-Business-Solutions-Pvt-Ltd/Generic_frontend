@@ -79,6 +79,7 @@ function Geofence() {
             setPage(page - 1);
           }
         });
+        window.location.reload();
       } else {
         toast.error(res.message || 'Failed to delete Geo Fence');
       }

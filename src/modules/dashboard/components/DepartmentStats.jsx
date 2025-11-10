@@ -9,12 +9,12 @@ import washingMachineIcon from '../../../assets/washing_machine.png';
 import airConditionerIcon from '../../../assets/air_conditioner.png';
 
 const DEPTS = {
-  AC: { label: 'Air Conditioner', icon: airConditionerIcon },
-  WM: { label: 'Washing Machine', icon: washingMachineIcon },
-  VD: { label: 'Visual Display', icon: VisualDisplayIcon },
-  COMP: { label: 'Computer', icon: computerIcon },
-  REF: { label: 'Refrigerator', icon: refrigeratorIcon },
-  SUPPORT: { label: 'Support', icon: supportIcon },
+  AC: { label: 'AC', icon: airConditionerIcon },
+  WM: { label: 'WM', icon: washingMachineIcon },
+  VD: { label: 'VD', icon: VisualDisplayIcon },
+  COMP: { label: 'COMP', icon: computerIcon },
+  REF: { label: 'REF', icon: refrigeratorIcon },
+  SUPPORT: { label: 'SUPPORT', icon: supportIcon },
 };
 
 export default function DepartmentStats() {

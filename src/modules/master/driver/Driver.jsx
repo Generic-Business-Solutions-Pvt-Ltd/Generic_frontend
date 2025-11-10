@@ -114,6 +114,7 @@ function Driver() {
       if (res.success) {
         toast.success('Driver deleted successfully!');
         dispatch(fetchDrivers(buildApiPayload()));
+        window.location.reload();
       } else {
         toast.error(res.message || 'Failed to delete driver');
       }

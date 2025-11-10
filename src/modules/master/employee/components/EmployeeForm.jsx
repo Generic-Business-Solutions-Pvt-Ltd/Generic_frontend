@@ -1,11 +1,57 @@
 import L from 'leaflet';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Autocomplete, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
-import { AddressServices, ApiService } from '../../../../services';
-import { useDropdownOpt } from '../../../../hooks/useDropdownOpt';
 import { APIURL } from '../../../../constants';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useDropdownOpt } from '../../../../hooks/useDropdownOpt';
+import { AddressServices, ApiService } from '../../../../services';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
+import { Autocomplete, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
+
+function TextInput({ name, label, type = 'text', required, placeholder, formVal, setFormVal, disabled }) {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormVal((prev) => ({ ...prev, [name]: value }));
+  };
+  return (
+    <div>
+      <label className='block mb-2 text-sm font-medium text-gray-900'>
+        {label} {required && <span className='text-red-500'>*</span>}
+      </label>
+      <TextField
+        size='small'
+        name={name}
+        type={type}
+        value={formVal[name] || ''}
+        onChange={handleChange}
+        disabled={disabled}
+        fullWidth
+        required={required}
+        placeholder={placeholder || label}
+      />
+    </div>
+  );
+}
+
+function AutoSelect({ label, options, value, loading, onChange, required, disabled }) {
+  return (
+    <div>
+      <label className='block mb-2 text-sm font-medium text-gray-900'>
+        {label} {required && <span className='text-red-500'>*</span>}
+      </label>
+      <Autocomplete
+        disablePortal
+        options={options}
+        loading={loading}
+        value={value}
+        onChange={onChange}
+        isOptionEqualToValue={(o, v) => o?.value === v?.value}
+        getOptionLabel={(o) => o?.label || ''}
+        renderInput={(params) => <TextField {...params} size='small' fullWidth />}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
 
 const customIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
@@ -34,9 +80,9 @@ const INITIAL_FORM = {
 };
 
 const isValidLatLng = (lat, lng) => {
-  const a = Number(lat),
-    b = Number(lng);
-  return !isNaN(a) && !isNaN(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180;
+  const a = +lat,
+    b = +lng;
+  return a >= -90 && a <= 90 && b >= -180 && b <= 180 && isFinite(a) && isFinite(b);
 };
 
 const formatLatLng = (v) => (v === '' || isNaN(Number(v)) ? '' : Number(v).toFixed(7));
@@ -60,7 +106,6 @@ function EmployeeForm() {
   const [addressOptions, setAddressOptions] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
 
-  // Dropdowns
   const dept = useDropdownOpt({
     apiUrl: APIURL.DEPARTMENTS,
     queryParams: { company_id: companyID },
@@ -92,13 +137,11 @@ function EmployeeForm() {
     valueSelector: (d) => d.id,
   });
 
-  // Load form data from rowData
   useEffect(() => {
     if (!rowData?.rowData || !['edit', 'view'].includes(rowData?.mode)) return;
     const d = rowData.rowData;
     const lat = d.boarding_latitude ? String(d.boarding_latitude) : '';
     const lng = d.boarding_longitude ? String(d.boarding_longitude) : '';
-
     const address = d.boarding_address?.trim() || d.address?.trim() || '';
 
     setFormVal({
@@ -116,7 +159,7 @@ function EmployeeForm() {
       vehicleRoute: d.vehicle_route_id || '',
       boardingPoint: d.boarding_stop_id || '',
       profilePhoto: null,
-      address: address,
+      address,
       latitude: lat,
       longitude: lng,
     });
@@ -125,12 +168,11 @@ function EmployeeForm() {
       setSelectedAddress({
         label: address,
         value: `${lat}-${lng}`,
-        otherData: { display_name: address, lat: lat || '', lon: lng || '' },
+        otherData: { display_name: address, lat, lon: lng },
       });
     }
   }, [rowData, isEditMode]);
 
-  // Remap dropdowns by name after loading
   useEffect(() => {
     if (!rowData?.rowData || !['edit', 'view'].includes(rowData?.mode)) return;
     const { department, plant: plantName } = rowData.rowData;
@@ -145,18 +187,6 @@ function EmployeeForm() {
       }));
     }
   }, [dept.options, plant.options, rowData, isEditMode]);
-
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setFormVal((prev) => ({ ...prev, [name]: value }));
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files?.length) {
-      setFormVal((prev) => ({ ...prev, profilePhoto: e.dataTransfer.files[0] }));
-    }
-  }, []);
 
   const handleAddressSearch = useCallback((_, value) => {
     if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
@@ -194,12 +224,7 @@ function EmployeeForm() {
       if (isViewMode) return;
       const res = await AddressServices.getLocationFromLatLng(lat, lng);
       const addr = Array.isArray(res) && res[0]?.display_name ? res[0].display_name : '';
-      setFormVal((prev) => ({
-        ...prev,
-        latitude: String(lat),
-        longitude: String(lng),
-        address: addr || prev.address,
-      }));
+      setFormVal((prev) => ({ ...prev, latitude: String(lat), longitude: String(lng), address: addr || prev.address }));
       if (addr) {
         setSelectedAddress({
           label: addr,
@@ -262,45 +287,12 @@ function EmployeeForm() {
   }, [formVal.profilePhoto]);
 
   const getDropdownValue = (opts, val) => opts.find((o) => o.value === val) || null;
-  const hasValidCoords = isValidLatLng(formVal.latitude, formVal.longitude);
 
-  const TextInput = ({ name, label, type = 'text', required, placeholder }) => (
-    <div>
-      <label className='block mb-2 text-sm font-medium text-gray-900'>
-        {label} {required && <span className='text-red-500'>*</span>}
-      </label>
-      <TextField
-        size='small'
-        name={name}
-        type={type}
-        value={formVal[name]}
-        onChange={handleChange}
-        disabled={isViewMode}
-        fullWidth
-        required={required}
-        placeholder={placeholder || label}
-      />
-    </div>
-  );
-
-  const AutoSelect = ({ label, options, value, loading, onChange, required }) => (
-    <div>
-      <label className='block mb-2 text-sm font-medium text-gray-900'>
-        {label} {required && <span className='text-red-500'>*</span>}
-      </label>
-      <Autocomplete
-        disablePortal
-        options={options}
-        loading={loading}
-        value={value}
-        onChange={onChange}
-        isOptionEqualToValue={(o, v) => o?.value === v?.value}
-        getOptionLabel={(o) => o?.label || ''}
-        renderInput={(params) => <TextField {...params} size='small' fullWidth />}
-        disabled={isViewMode}
-      />
-    </div>
-  );
+  const parsedLat = parseFloat(formVal.latitude);
+  const parsedLng = parseFloat(formVal.longitude);
+  const hasValidCoords = isValidLatLng(parsedLat, parsedLng);
+  const mapCenter = hasValidCoords ? [parsedLat, parsedLng] : [12.9716, 77.5946];
+  const markerPosition = hasValidCoords ? [parsedLat, parsedLng] : null;
 
   return (
     <div className='w-full p-2'>
@@ -308,16 +300,63 @@ function EmployeeForm() {
 
       <form onSubmit={handleSubmit}>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-          {/* Left Panel */}
           <div className='bg-white rounded-sm border-t-4 border-[#07163d] p-5'>
             <h2 className='text-lg text-gray-700 mb-3 font-semibold'>Employee Details</h2>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-              <TextInput name='firstName' label='First Name' required placeholder='Enter first name' />
-              <TextInput name='lastName' label='Last Name' placeholder='Enter last name' />
-              <TextInput name='employeeId' label='Employee ID' required placeholder='e.g., EMP001' />
-              <TextInput name='punchId' label='Punch ID' required placeholder='Enter punch ID' />
-              <TextInput name='email' label='Email' type='email' required placeholder='example@company.com' />
-              <TextInput name='phoneNumber' label='Phone Number' required placeholder='10-digit number' />
+              <TextInput
+                name='firstName'
+                label='First Name'
+                required
+                placeholder='Enter first name'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='lastName'
+                label='Last Name'
+                placeholder='Enter last name'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='employeeId'
+                label='Employee ID'
+                required
+                placeholder='e.g., EMP001'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='punchId'
+                label='Punch ID'
+                required
+                placeholder='Enter punch ID'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='email'
+                label='Email'
+                type='email'
+                required
+                placeholder='example@company.com'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='phoneNumber'
+                label='Phone Number'
+                required
+                placeholder='10-digit number'
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
 
               <AutoSelect
                 label='Department'
@@ -326,6 +365,7 @@ function EmployeeForm() {
                 loading={dept.loading}
                 onChange={(_, v) => setFormVal((p) => ({ ...p, selectedDepartment: v?.value || '' }))}
                 required
+                disabled={isViewMode}
               />
               <AutoSelect
                 label='Plant'
@@ -334,10 +374,27 @@ function EmployeeForm() {
                 loading={plant.loading}
                 onChange={(_, v) => setFormVal((p) => ({ ...p, selectedPlant: v?.value || '' }))}
                 required
+                disabled={isViewMode}
               />
 
-              <TextInput name='dateOfJoining' label='Joining Date' type='date' required />
-              <TextInput name='dateOfBirth' label='Date of Birth' type='date' required />
+              <TextInput
+                name='dateOfJoining'
+                label='Joining Date'
+                type='date'
+                required
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
+              <TextInput
+                name='dateOfBirth'
+                label='Date of Birth'
+                type='date'
+                required
+                formVal={formVal}
+                setFormVal={setFormVal}
+                disabled={isViewMode}
+              />
 
               <AutoSelect
                 label='Route'
@@ -345,6 +402,7 @@ function EmployeeForm() {
                 value={getDropdownValue(route.options, formVal.vehicleRoute)}
                 loading={route.loading}
                 onChange={(_, v) => setFormVal((p) => ({ ...p, vehicleRoute: v?.value || '' }))}
+                disabled={isViewMode}
               />
               <AutoSelect
                 label='Boarding Point'
@@ -352,23 +410,36 @@ function EmployeeForm() {
                 value={getDropdownValue(boarding.options, formVal.boardingPoint)}
                 loading={boarding.loading}
                 onChange={(_, v) => setFormVal((p) => ({ ...p, boardingPoint: v?.value || '' }))}
+                disabled={isViewMode}
               />
 
               <FormControl>
                 <FormLabel>
                   Gender <span className='text-red-500'>*</span>
                 </FormLabel>
-                <RadioGroup value={formVal.selectedGender} name='selectedGender' onChange={handleChange}>
+                <RadioGroup
+                  value={formVal.selectedGender}
+                  name='selectedGender'
+                  onChange={(e) => setFormVal((prev) => ({ ...prev, selectedGender: e.target.value }))}>
                   <FormControlLabel value='1' control={<Radio disabled={isViewMode} />} label='Female' />
                   <FormControlLabel value='2' control={<Radio disabled={isViewMode} />} label='Male' />
                 </RadioGroup>
               </FormControl>
+
               <div>
                 <label className='block mb-2 text-sm font-medium'>Profile Image</label>
                 <div
                   className='flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 hover:bg-gray-100'
                   onClick={() => !isViewMode && fileInputRef.current?.click()}
-                  onDrop={!isViewMode ? handleDrop : undefined}
+                  onDrop={
+                    !isViewMode
+                      ? (e) => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files?.length)
+                            setFormVal((p) => ({ ...p, profilePhoto: e.dataTransfer.files[0] }));
+                        }
+                      : undefined
+                  }
                   onDragOver={!isViewMode ? (e) => e.preventDefault() : undefined}
                   style={isViewMode ? { pointerEvents: 'none', opacity: 0.7 } : { cursor: 'pointer' }}>
                   <div className='flex flex-col items-center justify-center pt-5 pb-6'>
@@ -394,7 +465,6 @@ function EmployeeForm() {
             </div>
           </div>
 
-          {/* Right Panel - Map */}
           <div className='relatve bg-white rounded-sm border-t-4 border-[#07163d] p-5'>
             <h2 className='text-lg text-gray-700 mb-3 font-semibold'>Boarding Location</h2>
 
@@ -405,81 +475,70 @@ function EmployeeForm() {
               disablePortal
               options={addressOptions}
               value={selectedAddress}
+              loadingText='Loading...'
+              getOptionLabel={(opt) => opt.label || ''}
               onInputChange={handleAddressSearch}
               onChange={handleAddressChange}
-              isOptionEqualToValue={(o, v) => o?.label === v?.label}
-              getOptionLabel={(o) => o?.label || ''}
-              renderInput={(params) => <TextField {...params} size='small' fullWidth placeholder='Search address' />}
+              renderInput={(params) => <TextField {...params} size='small' fullWidth />}
               disabled={isViewMode}
             />
 
-            <div className='grid grid-cols-2 gap-3 mt-4'>
+            <div className='grid grid-cols-2 gap-3 mt-3'>
               <div>
-                <label className='block mb-2 text-sm font-medium'>
-                  Latitude <span className='text-red-500'>*</span>
-                </label>
+                <label className='block mb-2 text-sm font-medium text-gray-900'>Latitude</label>
                 <TextField
                   size='small'
                   name='latitude'
                   value={formVal.latitude}
-                  onChange={handleChange}
+                  onChange={(e) => setFormVal((p) => ({ ...p, latitude: e.target.value }))}
                   disabled={isViewMode}
                   fullWidth
-                  error={formVal.latitude !== '' && isNaN(Number(formVal.latitude))}
-                  helperText={formVal.latitude !== '' && isNaN(Number(formVal.latitude)) ? 'Must be a number' : ''}
                 />
               </div>
               <div>
-                <label className='block mb-2 text-sm font-medium'>
-                  Longitude <span className='text-red-500'>*</span>
-                </label>
+                <label className='block mb-2 text-sm font-medium text-gray-900'>Longitude</label>
                 <TextField
                   size='small'
                   name='longitude'
                   value={formVal.longitude}
-                  onChange={handleChange}
+                  onChange={(e) => setFormVal((p) => ({ ...p, longitude: e.target.value }))}
                   disabled={isViewMode}
                   fullWidth
-                  error={formVal.longitude !== '' && isNaN(Number(formVal.longitude))}
-                  helperText={formVal.longitude !== '' && isNaN(Number(formVal.longitude)) ? 'Must be a number' : ''}
                 />
               </div>
             </div>
 
-            <div className='mt-4'>
+            <div className='h-[400px] mt-3'>
               <MapContainer
-                center={hasValidCoords ? [Number(formVal.latitude), Number(formVal.longitude)] : [20.5937, 78.9629]}
-                zoom={hasValidCoords ? 15 : 5}
-                style={{ height: '300px', width: '100%' }}>
-                <TileLayer
-                  url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                  attribution='&copy; OpenStreetMap'
-                />
-                <MapClickHandler onMapClick={handleMapClick} disabled={isViewMode} />
-                {hasValidCoords && (
-                  <Marker position={[Number(formVal.latitude), Number(formVal.longitude)]} icon={customIcon}>
-                    <Popup>{formVal.address || 'Location'}</Popup>
+                center={mapCenter}
+                zoom={13}
+                className='h-full w-full rounded-md'
+                key={JSON.stringify(mapCenter)}>
+                <TileLayer url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' />
+                {!isViewMode && <MapClickHandler onMapClick={handleMapClick} />}
+                {markerPosition && (
+                  <Marker position={markerPosition} icon={customIcon}>
+                    <Popup>
+                      <strong>{formVal.address || 'Selected Location'}</strong>
+                      <br />
+                      Lat: {formatLatLng(formVal.latitude)}, Lng: {formatLatLng(formVal.longitude)}
+                    </Popup>
                   </Marker>
                 )}
               </MapContainer>
             </div>
-            <div className='flex justify-end items-end gap-4 mt-40'>
-              <button
-                type='button'
-                className='text-white bg-gray-500 hover:bg-gray-500/90 focus:ring-4 focus:outline-none focus:ring-gray-500/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'
-                onClick={() => navigate(-1)}>
-                Back
-              </button>
-              {!isViewMode && (
-                <button
-                  type='submit'
-                  className='text-white bg-[#07163d] hover:bg-[#07163d]/90 focus:ring-4 focus:outline-none focus:ring-[#07163d]/30 font-medium rounded-md text-sm px-5 py-2.5 text-center cursor-pointer'>
-                  Save
-                </button>
-              )}
-            </div>
           </div>
         </div>
+
+        {!isViewMode && (
+          <div className='mt-4 flex justify-end'>
+            <button
+              type='submit'
+              className='px-4 py-2 bg-[#07163d] text-white rounded hover:bg-[#0b2154] transition-colors'>
+              {isEditMode ? 'Update Employee' : 'Save Employee'}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

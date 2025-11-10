@@ -77,6 +77,7 @@ function Department() {
               setPage(page - 1);
             }
           });
+        window.location.reload();
       } else {
         toast.error('Failed to delete department');
       }

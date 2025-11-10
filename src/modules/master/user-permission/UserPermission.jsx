@@ -39,7 +39,10 @@ function UserPermission() {
     navigate(`/master/user-permission/create`, { state: row });
   };
 
-  const handleDelete = (row) => alert(`Deleting ${row.name}`);
+  const handleDelete = (row) => {
+    alert(`Deleting ${row.name}`);
+    window.location.reload();
+  };
 
   const handleExport = () => {
     console.log('Exporting data...');

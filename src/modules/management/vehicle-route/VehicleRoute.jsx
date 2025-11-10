@@ -103,6 +103,7 @@ function VehicleRoute() {
             setPage(page - 1);
           }
         });
+        window.location.reload();
       } else {
         toast.error(response.message || 'Failed to delete Vehicle Route');
       }
